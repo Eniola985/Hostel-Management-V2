@@ -1,21 +1,25 @@
 <?php
-session_start();
-if (!isset($_SESSION['admin_id'])) { header('Location: login.php'); exit; }
-require_once '../includes/db.php';
+require_once '../includes/admin_auth.php';
+$hostel = current_admin_hostel($pdo);
 
 $students = $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
-$hostels = $pdo->query("SELECT COUNT(*) FROM hostels")->fetchColumn();
-$rooms = $pdo->query("SELECT COUNT(*) FROM rooms")->fetchColumn();
-$available = $pdo->query("SELECT COUNT(*) FROM rooms WHERE status='Available'")->fetchColumn();
-$allocations = $pdo->query("SELECT COUNT(*) FROM allocations WHERE status='Active'")->fetchColumn();
-$pending = $pdo->query("SELECT COUNT(*) FROM applications WHERE status='Pending'")->fetchColumn();
+$hostels = 1;
+$rooms = $pdo->prepare("SELECT COUNT(*) FROM rooms WHERE hostel_id=?");
+$rooms->execute([$admin_hostel_id]);
+$rooms = $rooms->fetchColumn();
+$available = $pdo->prepare("SELECT COUNT(*) FROM rooms WHERE hostel_id=? AND status='Available'");
+$available->execute([$admin_hostel_id]);
+$available = $available->fetchColumn();
+$allocations = $pdo->prepare("SELECT COUNT(*) FROM allocations a JOIN rooms r ON r.room_id=a.room_id WHERE r.hostel_id=? AND a.status='Active'");
+$allocations->execute([$admin_hostel_id]);
+$allocations = $allocations->fetchColumn();
+$pending = $pdo->prepare("SELECT COUNT(*) FROM applications WHERE hostel_id=? AND status='Pending'");
+$pending->execute([$admin_hostel_id]);
+$pending = $pending->fetchColumn();
 
-$recent = $pdo->query("SELECT a.*, s.full_name, s.matric_no, r.room_number, h.hostel_name 
-    FROM allocations a 
-    JOIN students s ON a.student_id = s.student_id 
-    JOIN rooms r ON a.room_id = r.room_id 
-    JOIN hostels h ON r.hostel_id = h.hostel_id 
-    ORDER BY a.allocation_date DESC LIMIT 5")->fetchAll();
+$recent = $pdo->prepare("SELECT a.*, s.full_name, s.matric_no, r.room_number, h.hostel_name FROM allocations a JOIN students s ON a.student_id=s.student_id JOIN rooms r ON a.room_id=r.room_id JOIN hostels h ON r.hostel_id=h.hostel_id WHERE r.hostel_id=? ORDER BY a.allocation_date DESC LIMIT 5");
+$recent->execute([$admin_hostel_id]);
+$recent = $recent->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -61,8 +65,8 @@ $recent = $pdo->query("SELECT a.*, s.full_name, s.matric_no, r.room_number, h.ho
         </nav>
     </aside>
     <main class="main">
-        <div class="page-title">Welcome, <?= htmlspecialchars($_SESSION['admin_name']) ?> 👋</div>
-        <div class="page-subtitle">Here is a summary of hostel accommodation activities</div>
+        <div class="page-title">Welcome, <?= htmlspecialchars($hostel['hostel_name']) ?> Admin 👋</div>
+        <div class="page-subtitle">Here is a summary of <?= htmlspecialchars($hostel['hostel_name']) ?> accommodation activities</div>
 
         <div class="stats-grid">
             <div class="stat-card">
