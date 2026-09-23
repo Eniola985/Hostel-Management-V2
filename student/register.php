@@ -6,24 +6,31 @@ $msg = $err = '';
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $matric = trim($_POST['matric_no'] ?? '');
     $form_no = trim($_POST['form_no'] ?? '');
-    $name = trim($_POST['full_name']);
-    $dept = trim($_POST['department']);
-    $level = $_POST['level'];
-    $gender = $_POST['gender'];
-    $phone = trim($_POST['phone']);
-    $email = trim($_POST['email']);
+    $name = trim($_POST['full_name'] ?? '');
+    $dept = trim($_POST['department'] ?? '');
+    $level = $_POST['level'] ?? '';
+    $gender = $_POST['gender'] ?? '';
+    $phone = trim($_POST['phone'] ?? '');
+    $email = trim($_POST['email'] ?? '');
     $pass = $_POST['password'] ?? '';
     $confirm = $_POST['confirm_password'] ?? '';
 
-    if (!preg_match('/^\d{13}$/', $matric)) {
-        $err = 'Matriculation number must be exactly 13 digits.';
+    if ($matric !== '' && !preg_match('/^\d{13}$/', $matric)) {
+        $err = 'Matriculation number must be exactly 13 digits when provided.';
+    } elseif ($matric === '' && $form_no === '') {
+        $err = 'Provide either a matriculation number or a form number.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $err = 'Please provide a valid email address.';
+    } elseif (strlen($pass) < 8) {
+        $err = 'Password must be at least 8 characters.';
     } elseif ($pass !== $confirm) {
         $err = 'Passwords do not match.';
     } else {
         $check = $pdo->prepare("SELECT student_id FROM students WHERE (matric_no IS NOT NULL AND matric_no=?) OR (form_no IS NOT NULL AND form_no=?) OR email=? LIMIT 1");
         $check->execute([$matric ?: null, $form_no ?: null, $email]);
+
         if ($check->fetch()) {
-            $err = 'A student with this matriculation number already exists.';
+            $err = 'A student with these identity details or email already exists.';
         } else {
             $password_hash = password_hash($pass, PASSWORD_DEFAULT);
             $pdo->prepare("INSERT INTO students (matric_no, form_no, full_name, department, level, gender, phone, email, password) VALUES (?,?,?,?,?,?,?,?,?)")
