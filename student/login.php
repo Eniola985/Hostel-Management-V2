@@ -19,7 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             header('Location: dashboard.php');
             exit;
         } else {
-            $err = 'Invalid matriculation number or password.';
+            $err = 'Invalid matriculation/form number or password.';
         }
     }
 }
@@ -43,7 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($err): ?><div class="alert alert-error"><?= htmlspecialchars($err) ?></div><?php endif; ?>
         <form method="POST">
             <div class="form-group">
-                <label>Matriculation Number (13 digits)</label>
+                <label>Matriculation Number or Form Number</label>
                 <input type="text" name="matric_no" placeholder="e.g. 2024705010106" pattern="\d{13}" maxlength="13" required>
             </div>
             <div class="form-group">
