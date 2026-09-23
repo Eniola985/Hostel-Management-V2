@@ -1,21 +1,16 @@
 <?php
-session_start();
-if (!isset($_SESSION['admin_id'])) { header('Location: login.php'); exit; }
-require_once '../includes/db.php';
+require_once '../includes/admin_auth.php';
+$hostel = current_admin_hostel($pdo);
 
-$hostel_id = (int)($_GET['hostel_id'] ?? 0);
+$hostel_id = $admin_hostel_id;
 $msg = '';
 
 if (isset($_GET['delete_room'])) {
-    $pdo->prepare("DELETE FROM rooms WHERE room_id=?")->execute([$_GET['delete_room']]);
+    $pdo->prepare("DELETE FROM rooms WHERE room_id=? AND hostel_id=?")->execute([(int)$_GET['delete_room'], $admin_hostel_id]);
     $msg = 'Room deleted.';
 }
 
-$hostel = $pdo->prepare("SELECT * FROM hostels WHERE hostel_id=?");
-$hostel->execute([$hostel_id]);
-$hostel = $hostel->fetch();
-
-if (!$hostel) { header('Location: hostels.php'); exit; }
+$hostel = current_admin_hostel($pdo);
 
 $rooms = $pdo->prepare("SELECT r.*, COUNT(a.allocation_id) as alloc_count FROM rooms r LEFT JOIN allocations a ON r.room_id=a.room_id AND a.status='Active' WHERE r.hostel_id=? GROUP BY r.room_id ORDER BY r.room_number");
 $rooms->execute([$hostel_id]);
@@ -61,7 +56,7 @@ $rooms = $rooms->fetchAll();
     </nav>
 </aside>
 <main class="main">
-    <div class="breadcrumb"><a href="hostels.php">Hostels</a> &rsaquo; <?= htmlspecialchars($hostel['hostel_name']) ?></div>
+    <div class="breadcrumb"><a href="hostels.php"><?= htmlspecialchars($hostel['hostel_name']) ?></a> &rsaquo; <?= htmlspecialchars($hostel['hostel_name']) ?></div>
     <div class="page-title"><?= htmlspecialchars($hostel['hostel_name']) ?></div>
     <div class="page-subtitle"><?= $hostel['hostel_type'] ?> Hostel, <?= count($rooms) ?> rooms</div>
     <?php if ($msg): ?><div class="alert alert-success"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
