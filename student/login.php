@@ -4,23 +4,27 @@ require_once '../includes/db.php';
 $err = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $matric = trim($_POST['matric_no']);
-    $pass = trim($_POST['password']);
-    if (!preg_match('/^\d{13}$/', $matric)) {
-        $err = 'Matriculation number must be exactly 13 digits.';
+    $identifier = trim($_POST['identifier'] ?? '');
+    $pass = $_POST['password'] ?? '';
+
+    if ($identifier === '') {
+        $err = 'Enter your matriculation number or form number.';
     } else {
-        $stmt = $pdo->prepare("SELECT * FROM students WHERE matric_no=?");
-        $stmt->execute([$matric]);
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE matric_no=? OR form_no=? LIMIT 1");
+        $stmt->execute([$identifier, $identifier]);
         $student = $stmt->fetch();
-        if ($student && $pass === $student['password']) {
+
+        if ($student && password_verify($pass, $student['password'])) {
+            session_regenerate_id(true);
             $_SESSION['student_id'] = $student['student_id'];
             $_SESSION['student_name'] = $student['full_name'];
             $_SESSION['student_matric'] = $student['matric_no'];
+            $_SESSION['student_form_no'] = $student['form_no'];
             header('Location: dashboard.php');
             exit;
-        } else {
-            $err = 'Invalid matriculation/form number or password.';
         }
+
+        $err = 'Invalid matriculation/form number or password.';
     }
 }
 ?>
@@ -44,7 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form method="POST">
             <div class="form-group">
                 <label>Matriculation Number or Form Number</label>
-                <input type="text" name="matric_no" placeholder="e.g. 2024705010106" pattern="\d{13}" maxlength="13" required>
+                <input type="text" name="identifier" placeholder="Matric number or form number (e.g. F2603776)" required>
             </div>
             <div class="form-group">
                 <label>Password</label>
