@@ -1,7 +1,6 @@
 <?php
-session_start();
-if (!isset($_SESSION['admin_id'])) { header('Location: login.php'); exit; }
-require_once '../includes/db.php';
+require_once '../includes/admin_auth.php';
+$hostel = current_admin_hostel($pdo);
 
 $msg = '';
 $err = '';
@@ -18,12 +17,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             if ($action === 'approve') {
-                $statement = $pdo->prepare("UPDATE applications SET status='Approved', rejection_reason=NULL WHERE app_id=? AND status='Pending'");
-                $statement->execute([$app_id]);
+                $statement = $pdo->prepare("UPDATE applications SET status='Approved', rejection_reason=NULL WHERE app_id=? AND hostel_id=? AND status='Pending'");
+                $statement->execute([$app_id, $admin_hostel_id]);
                 $msg = $statement->rowCount() ? 'Application approved successfully.' : 'This application is no longer pending.';
             } else {
-                $statement = $pdo->prepare("UPDATE applications SET status='Rejected', rejection_reason=? WHERE app_id=? AND status='Pending'");
-                $statement->execute([$rejection_reason, $app_id]);
+                $statement = $pdo->prepare("UPDATE applications SET status='Rejected', rejection_reason=? WHERE app_id=? AND hostel_id=? AND status='Pending'");
+                $statement->execute([$rejection_reason, $app_id, $admin_hostel_id]);
                 $msg = $statement->rowCount() ? 'Application rejected and the reason was saved.' : 'This application is no longer pending.';
             }
         } catch (PDOException $e) {
@@ -32,11 +31,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$apps = $pdo->query("SELECT a.*, s.full_name, s.matric_no, s.department, s.level, s.gender, h.hostel_name, h.hostel_type 
+$apps = $pdo->prepare("SELECT a.*, s.full_name, s.matric_no, s.department, s.level, s.gender, h.hostel_name, h.hostel_type 
     FROM applications a 
     JOIN students s ON a.student_id = s.student_id 
     JOIN hostels h ON a.hostel_id = h.hostel_id 
-    ORDER BY a.applied_at DESC")->fetchAll();
+    WHERE a.hostel_id = ?
+    ORDER BY a.applied_at DESC");
+$apps->execute([$admin_hostel_id]);
+$apps = $apps->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -78,7 +80,7 @@ $apps = $pdo->query("SELECT a.*, s.full_name, s.matric_no, s.department, s.level
     </nav>
 </aside>
 <main class="main">
-    <div class="page-title">Hostel Applications</div>
+    <div class="page-title"><?= htmlspecialchars($hostel['hostel_name']) ?> Applications</div>
     <div class="page-subtitle">Review and process student accommodation applications</div>
     <?php if ($msg): ?><div class="alert alert-success"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
     <?php if ($err): ?><div class="alert alert-error"><?= htmlspecialchars($err) ?></div><?php endif; ?>
