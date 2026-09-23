@@ -79,6 +79,7 @@ CREATE TABLE applications (
     FOREIGN KEY (student_id) REFERENCES students(student_id) ON DELETE CASCADE,
     FOREIGN KEY (hostel_id) REFERENCES hostels(hostel_id) ON DELETE CASCADE,
     FOREIGN KEY (preferred_room_id) REFERENCES rooms(room_id) ON DELETE SET NULL,
+    UNIQUE KEY uq_application_student (student_id),
     INDEX idx_app_hostel_status (hostel_id,status),
     INDEX idx_app_student (student_id)
 );
