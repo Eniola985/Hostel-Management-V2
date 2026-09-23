@@ -6,9 +6,26 @@
  * must be supplied by the Polytechnic/Remita integration account.
  * The application fails closed when the integration is not configured.
  */
+function remita_config(string $key): string {
+    $value = getenv($key);
+    if ($value !== false && $value !== '') {
+        return (string)$value;
+    }
+
+    $file = __DIR__ . '/../.env.local';
+    if (is_readable($file)) {
+        $config = parse_ini_file($file);
+        if (isset($config[$key]) && $config[$key] !== '') {
+            return (string)$config[$key];
+        }
+    }
+
+    return '';
+}
+
 function verify_remita_rrr(string $rrr, float $expectedAmount): array {
-    $url = getenv('REMITA_VERIFY_URL') ?: '';
-    $apiKey = getenv('REMITA_API_KEY') ?: '';
+    $url = remita_config('REMITA_VERIFY_URL');
+    $apiKey = remita_config('REMITA_API_KEY');
 
     if ($url === '') {
         return ['verified' => false, 'message' => 'Remita verification is not configured on this server.'];
@@ -18,11 +35,7 @@ function verify_remita_rrr(string $rrr, float $expectedAmount): array {
         return ['verified' => false, 'message' => 'Enter a valid Remita Retrieval Reference (RRR).'];
     }
 
-    $payload = json_encode([
-        'rrr' => $rrr,
-        'amount' => $expectedAmount
-    ]);
-
+    $payload = json_encode(['rrr' => $rrr, 'amount' => $expectedAmount]);
     $headers = ['Content-Type: application/json', 'Accept: application/json'];
     if ($apiKey !== '') {
         $headers[] = 'Authorization: Bearer ' . $apiKey;
@@ -40,7 +53,7 @@ function verify_remita_rrr(string $rrr, float $expectedAmount): array {
         CURLOPT_SSL_VERIFYHOST => 2,
     ]);
     $body = curl_exec($ch);
-    $httpCode = (int) curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $httpCode = (int)curl_getinfo($ch, CURLINFO_HTTP_CODE);
     $curlError = curl_error($ch);
     curl_close($ch);
 
@@ -53,8 +66,6 @@ function verify_remita_rrr(string $rrr, float $expectedAmount): array {
         return ['verified' => false, 'message' => 'Remita could not verify this RRR.'];
     }
 
-    // Keep the adapter tolerant of provider response naming while still
-    // requiring both a successful status and the expected amount.
     $status = strtolower((string)($data['status'] ?? $data['paymentStatus'] ?? $data['responseCode'] ?? ''));
     $amount = isset($data['amount']) ? (float)$data['amount']
         : (isset($data['paymentAmount']) ? (float)$data['paymentAmount'] : null);
