@@ -3,22 +3,32 @@ session_start();
 require_once '../includes/db.php';
 $msg = $err = '';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $matric = trim($_POST['matric_no'] ?? '');
-    $form_no = strtoupper(trim($_POST['form_no'] ?? ''));
-    $name = trim($_POST['full_name'] ?? '');
-    $dept = trim($_POST['department'] ?? '');
-    $level = $_POST['level'] ?? '';
-    $gender = $_POST['gender'] ?? '';
-    $phone = trim($_POST['phone'] ?? '');
-    $email = trim($_POST['email'] ?? '');
-    $pass = $_POST['password'] ?? '';
-    $confirm = $_POST['confirm_password'] ?? '';
+$matric = trim($_POST['matric_no'] ?? '');
+$form_no = strtoupper(trim($_POST['form_no'] ?? ''));
+$name = trim($_POST['full_name'] ?? '');
+$dept = trim($_POST['department'] ?? '');
+$level = $_POST['level'] ?? '';
+$gender = $_POST['gender'] ?? '';
+$phone = trim($_POST['phone'] ?? '');
+$email = trim($_POST['email'] ?? '');
+$pass = $_POST['password'] ?? '';
+$confirm = $_POST['confirm_password'] ?? '';
 
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (!preg_match('/^[FD][0-9]{7}$/', $form_no)) {
         $err = 'Form number is required and must be in the format F2405297 or D2405297.';
     } elseif ($matric !== '' && !preg_match('/^\d{13}$/', $matric)) {
         $err = 'Matriculation number must be exactly 13 digits when provided.';
+    } elseif ($name === '') {
+        $err = 'Please enter your full name.';
+    } elseif ($dept === '') {
+        $err = 'Please enter your department.';
+    } elseif ($level === '') {
+        $err = 'Please select your level.';
+    } elseif ($gender === '') {
+        $err = 'Please select your gender.';
+    } elseif ($phone === '') {
+        $err = 'Please enter your phone number.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $err = 'Please provide a valid email address.';
     } elseif (strlen($pass) < 8) {
@@ -36,6 +46,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("INSERT INTO students (matric_no, form_no, full_name, department, level, gender, phone, email, password) VALUES (?,?,?,?,?,?,?,?,?)")
                 ->execute([$matric ?: null, $form_no, $name, $dept, $level, $gender, $phone, $email, $password_hash]);
             $msg = 'Registration successful! You can now login with your form number.';
+            $matric = $form_no = $name = $dept = $level = $gender = $phone = $email = $pass = $confirm = '';
         }
     }
 }
@@ -62,22 +73,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <div class="form-row">
                 <div class="form-group">
                     <label>Form Number <small>(required)</small></label>
-                    <input type="text" name="form_no" placeholder="e.g. F2405297" pattern="[FDfd][0-9]{7}" maxlength="8" minlength="8" style="text-transform:uppercase" required>
-                    <small>Use F or D followed by exactly 7 digits.</small>
+                    <input type="text" name="form_no" placeholder="e.g. F2405297" pattern="[FDfd][0-9]{7}" maxlength="8" minlength="8" style="text-transform:uppercase" value="<?= htmlspecialchars($form_no) ?>" required>
                 </div>
                 <div class="form-group">
                     <label>Matriculation Number <small>(optional)</small></label>
-                    <input type="text" name="matric_no" placeholder="13-digit matric number" pattern="\d{13}" maxlength="13">
+                    <input type="text" name="matric_no" placeholder="13-digit matric number" pattern="\d{13}" maxlength="13" value="<?= htmlspecialchars($matric) ?>">
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
                     <label>Full Name</label>
-                    <input type="text" name="full_name" placeholder="Surname First" required>
+                    <input type="text" name="full_name" placeholder="Surname First" value="<?= htmlspecialchars($name) ?>" required>
                 </div>
                 <div class="form-group">
                     <label>Department</label>
-                    <input type="text" name="department" placeholder="e.g. Computer Science" required>
+                    <input type="text" name="department" placeholder="e.g. Computer Science" value="<?= htmlspecialchars($dept) ?>" required>
                 </div>
             </div>
             <div class="form-row">
@@ -85,28 +95,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <label>Level</label>
                     <select name="level" required>
                         <option value="">Select Level</option>
-                        <option value="ND1">ND 1</option>
-                        <option value="ND2">ND 2</option>
-                        <option value="HND1">HND 1</option>
-                        <option value="HND2">HND 2</option>
+                        <option value="ND1" <?= $level === 'ND1' ? 'selected' : '' ?>>ND 1</option>
+                        <option value="ND2" <?= $level === 'ND2' ? 'selected' : '' ?>>ND 2</option>
+                        <option value="HND1" <?= $level === 'HND1' ? 'selected' : '' ?>>HND 1</option>
+                        <option value="HND2" <?= $level === 'HND2' ? 'selected' : '' ?>>HND 2</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Gender</label>
                     <select name="gender" required>
                         <option value="">Select Gender</option>
-                        <option value="Male">Male</option>
-                        <option value="Female">Female</option>
+                        <option value="Male" <?= $gender === 'Male' ? 'selected' : '' ?>>Male</option>
+                        <option value="Female" <?= $gender === 'Female' ? 'selected' : '' ?>>Female</option>
                     </select>
                 </div>
             </div>
             <div class="form-group">
                 <label>Phone Number</label>
-                <input type="text" name="phone" placeholder="e.g. 08012345678" required>
+                <input type="text" name="phone" placeholder="e.g. 08012345678" value="<?= htmlspecialchars($phone) ?>" required>
             </div>
             <div class="form-group">
                 <label>Email Address</label>
-                <input type="email" name="email" placeholder="your@email.com" required>
+                <input type="email" name="email" placeholder="your@email.com" value="<?= htmlspecialchars($email) ?>" required>
             </div>
             <div class="form-row">
                 <div class="form-group">
