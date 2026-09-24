@@ -4,14 +4,14 @@ require_once '../includes/db.php';
 $err = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $identifier = trim($_POST['identifier'] ?? '');
+    $form_no = strtoupper(trim($_POST['form_no'] ?? ''));
     $pass = $_POST['password'] ?? '';
 
-    if ($identifier === '') {
-        $err = 'Enter your matriculation number or form number.';
+    if (!preg_match('/^[FD][0-9]{7}$/', $form_no)) {
+        $err = 'Enter a valid form number in the format F2405297 or D2405297.';
     } else {
-        $stmt = $pdo->prepare("SELECT * FROM students WHERE matric_no=? OR form_no=? LIMIT 1");
-        $stmt->execute([$identifier, $identifier]);
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE form_no=? LIMIT 1");
+        $stmt->execute([$form_no]);
         $student = $stmt->fetch();
 
         if ($student && password_verify($pass, $student['password'])) {
@@ -24,7 +24,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        $err = 'Invalid matriculation/form number or password.';
+        $err = 'Invalid form number or password.';
     }
 }
 ?>
@@ -47,8 +47,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($err): ?><div class="alert alert-error"><?= htmlspecialchars($err) ?></div><?php endif; ?>
         <form method="POST">
             <div class="form-group">
-                <label>Matriculation Number or Form Number</label>
-                <input type="text" name="identifier" placeholder="Matric number or form number (e.g. F2603776)" required>
+                <label>Form Number</label>
+                <input type="text" name="form_no" placeholder="e.g. F2405297" pattern="[FDfd][0-9]{7}" maxlength="8" minlength="8" style="text-transform:uppercase" required autofocus>
+                <small>Use F or D followed by exactly 7 digits.</small>
             </div>
             <div class="form-group">
                 <label>Password</label>
