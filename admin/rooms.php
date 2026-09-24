@@ -1,27 +1,58 @@
 <?php
 require_once '../includes/admin_auth.php';
 $hostel = current_admin_hostel($pdo);
-
 $hostel_id = $admin_hostel_id;
 $msg = '';
+$err = '';
 
-if (isset($_GET['delete_room'])) {
-    $pdo->prepare("DELETE FROM rooms WHERE room_id=? AND hostel_id=?")->execute([(int)$_GET['delete_room'], $admin_hostel_id]);
-    $msg = 'Room deleted.';
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_room'])) {
+    $room_number = trim($_POST['room_number'] ?? '');
+    $capacity = (int)($_POST['capacity'] ?? 0);
+
+    if ($room_number === '' || $capacity < 1 || $capacity > 10) {
+        $err = 'Enter a valid room number and capacity between 1 and 10.';
+    } else {
+        try {
+            $pdo->prepare('INSERT INTO rooms (hostel_id, room_number, capacity) VALUES (?,?,?)')
+                ->execute([$hostel_id, $room_number, $capacity]);
+            $msg = 'Room added successfully.';
+        } catch (PDOException $e) {
+            $err = 'That room number already exists in this hostel, or the room could not be added.';
+        }
+    }
 }
 
-$hostel = current_admin_hostel($pdo);
+if (isset($_GET['delete_room'])) {
+    $room_id = (int)$_GET['delete_room'];
+    $stmt = $pdo->prepare('SELECT occupied FROM rooms WHERE room_id=? AND hostel_id=?');
+    $stmt->execute([$room_id, $hostel_id]);
+    $room = $stmt->fetch();
 
-$rooms = $pdo->prepare("SELECT r.*, COUNT(a.allocation_id) as alloc_count FROM rooms r LEFT JOIN allocations a ON r.room_id=a.room_id AND a.status='Active' WHERE r.hostel_id=? GROUP BY r.room_id ORDER BY r.room_number");
-$rooms->execute([$hostel_id]);
-$rooms = $rooms->fetchAll();
+    if (!$room) {
+        $err = 'Room not found in your hostel.';
+    } elseif ((int)$room['occupied'] > 0) {
+        $err = 'An occupied room cannot be deleted.';
+    } else {
+        $pdo->prepare('DELETE FROM rooms WHERE room_id=? AND hostel_id=?')->execute([$room_id, $hostel_id]);
+        $msg = 'Room deleted.';
+    }
+}
+
+$roomsStmt = $pdo->prepare("SELECT r.*, COUNT(a.allocation_id) AS alloc_count
+    FROM rooms r
+    LEFT JOIN allocations a ON r.room_id=a.room_id AND a.status='Active'
+    WHERE r.hostel_id=?
+    GROUP BY r.room_id
+    ORDER BY r.room_number");
+$roomsStmt->execute([$hostel_id]);
+$rooms = $roomsStmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rooms - <?= htmlspecialchars($hostel['hostel_name']) ?></title>
-<link rel="stylesheet" href="../css/style.css?v=6">
+<link rel="stylesheet" href="../css/style.css?v=7">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -29,7 +60,7 @@ $rooms = $rooms->fetchAll();
     <div class="brand"><img src="../assets/POLYLOGO.jpg" alt="The Polytechnic, Ibadan logo"> Poly Ibadan HMS Admin</div>
     <ul class="nav-links">
         <li><a href="dashboard.php">Dashboard</a></li>
-        <li><a href="hostels.php" class="active">Hostels</a></li>
+        <li><a href="hostels.php" class="active">My Hostel</a></li>
         <li><a href="students.php">Students</a></li>
         <li><a href="applications.php">Applications</a></li>
         <li><a href="allocations.php">Allocations</a></li>
@@ -42,11 +73,11 @@ $rooms = $rooms->fetchAll();
     <div class="user-info">
         <div class="avatar">A</div>
         <div class="name"><?= htmlspecialchars($_SESSION['admin_name']) ?></div>
-        <div class="role">Administrator</div>
+        <div class="role"><?= htmlspecialchars($hostel['hostel_name']) ?> Admin</div>
     </div>
     <nav class="sidebar-nav">
         <a href="dashboard.php">🏠 Dashboard</a>
-        <a href="hostels.php" class="active">🏨 Manage Hostels</a>
+        <a href="hostels.php" class="active">🏨 My Hostel</a>
         <a href="students.php">👥 Students</a>
         <a href="applications.php">📋 Applications</a>
         <a href="allocations.php">🛏 Allocations</a>
@@ -56,28 +87,51 @@ $rooms = $rooms->fetchAll();
     </nav>
 </aside>
 <main class="main">
-    <div class="breadcrumb"><a href="hostels.php"><?= htmlspecialchars($hostel['hostel_name']) ?></a> &rsaquo; <?= htmlspecialchars($hostel['hostel_name']) ?></div>
-    <div class="page-title"><?= htmlspecialchars($hostel['hostel_name']) ?></div>
-    <div class="page-subtitle"><?= $hostel['hostel_type'] ?> Hostel, <?= count($rooms) ?> rooms</div>
-    <?php if ($msg): ?><div class="alert alert-success"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
+    <div class="breadcrumb"><a href="hostels.php"><?= htmlspecialchars($hostel['hostel_name']) ?></a> &rsaquo; Rooms</div>
+    <div class="page-title">Rooms — <?= htmlspecialchars($hostel['hostel_name']) ?></div>
+    <div class="page-subtitle">Only rooms belonging to your assigned hostel are visible here.</div>
 
-    <div class="room-grid">
-        <?php foreach ($rooms as $r): ?>
-        <div class="room-item <?= strtolower($r['status']) ?>">
-            <div class="room-num">Room <?= htmlspecialchars($r['room_number']) ?></div>
-            <div style="font-size:0.8rem;color:#64748b;margin:4px 0;"><?= $r['occupied'] ?>/<?= $r['capacity'] ?> occupied</div>
-            <div class="room-status"><?= $r['status'] ?></div>
-            <div style="margin-top:8px;">
-                <a href="?hostel_id=<?= $hostel_id ?>&delete_room=<?= $r['room_id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Delete room <?= $r['room_number'] ?>?')">Delete</a>
+    <?php if ($msg): ?><div class="alert alert-success"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
+    <?php if ($err): ?><div class="alert alert-error"><?= htmlspecialchars($err) ?></div><?php endif; ?>
+
+    <div class="form-card" style="max-width:100%;margin-bottom:24px;">
+        <h3>🚪 Add Room</h3>
+        <form method="POST">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Room Number</label>
+                    <input type="text" name="room_number" placeholder="e.g. 106" maxlength="50" required>
+                </div>
+                <div class="form-group">
+                    <label>Capacity (Students)</label>
+                    <input type="number" name="capacity" min="1" max="10" value="4" required>
+                </div>
             </div>
-        </div>
-        <?php endforeach; ?>
-        <?php if (empty($rooms)): ?>
-            <div class="empty-state"><span class="empty-icon">🚪</span><p>No rooms added yet. <a href="hostels.php">Add rooms</a></p></div>
-        <?php endif; ?>
+            <button type="submit" name="add_room" class="btn btn-success">Add Room</button>
+        </form>
     </div>
-    <div style="margin-top:20px;">
-        <a href="hostels.php" class="btn btn-info">&larr; Back to Hostels</a>
+
+    <div class="card">
+        <div class="card-header"><h3>Rooms (<?= count($rooms) ?>)</h3></div>
+        <div class="room-grid">
+            <?php foreach ($rooms as $r): ?>
+            <div class="room-item <?= strtolower($r['status']) ?>">
+                <div class="room-num">Room <?= htmlspecialchars($r['room_number']) ?></div>
+                <div style="font-size:.8rem;color:#64748b;margin:4px 0;"><?= (int)$r['occupied'] ?>/<?= (int)$r['capacity'] ?> occupied</div>
+                <div class="room-status"><?= htmlspecialchars($r['status']) ?></div>
+                <div style="margin-top:8px;">
+                    <?php if ((int)$r['occupied'] === 0): ?>
+                        <a href="?delete_room=<?= (int)$r['room_id'] ?>" class="btn btn-danger btn-sm" onclick="return confirm('Delete room <?= htmlspecialchars($r['room_number'], ENT_QUOTES) ?>?')">Delete</a>
+                    <?php else: ?>
+                        <span style="color:#94a3b8;font-size:.8rem;">Occupied</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+            <?php if (!$rooms): ?>
+                <div class="empty-state"><span class="empty-icon">🚪</span><p>No rooms added yet.</p></div>
+            <?php endif; ?>
+        </div>
     </div>
 </main>
 </div>
