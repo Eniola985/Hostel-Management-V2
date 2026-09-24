@@ -2,9 +2,9 @@
 session_start();
 require_once '../includes/db.php';
 $err = '';
+$form_no = strtoupper(trim($_POST['form_no'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $form_no = strtoupper(trim($_POST['form_no'] ?? ''));
     $pass = $_POST['password'] ?? '';
 
     if (!preg_match('/^[FD][0-9]{7}$/', $form_no)) {
@@ -48,8 +48,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form method="POST">
             <div class="form-group">
                 <label>Form Number</label>
-                <input type="text" name="form_no" placeholder="e.g. F2405297" pattern="[FDfd][0-9]{7}" maxlength="8" minlength="8" style="text-transform:uppercase" required autofocus>
-                <small>Use F or D followed by exactly 7 digits.</small>
+                <input type="text" name="form_no" placeholder="e.g. F2405297" pattern="[FDfd][0-9]{7}" maxlength="8" minlength="8" style="text-transform:uppercase" value="<?= htmlspecialchars($form_no) ?>" required autofocus>
             </div>
             <div class="form-group">
                 <label>Password</label>
