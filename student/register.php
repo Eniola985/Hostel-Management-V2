@@ -5,7 +5,7 @@ $msg = $err = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $matric = trim($_POST['matric_no'] ?? '');
-    $form_no = trim($_POST['form_no'] ?? '');
+    $form_no = strtoupper(trim($_POST['form_no'] ?? ''));
     $name = trim($_POST['full_name'] ?? '');
     $dept = trim($_POST['department'] ?? '');
     $level = $_POST['level'] ?? '';
@@ -15,10 +15,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pass = $_POST['password'] ?? '';
     $confirm = $_POST['confirm_password'] ?? '';
 
-    if ($matric !== '' && !preg_match('/^\d{13}$/', $matric)) {
+    if (!preg_match('/^[FD][0-9]{7}$/', $form_no)) {
+        $err = 'Form number is required and must be in the format F2405297 or D2405297.';
+    } elseif ($matric !== '' && !preg_match('/^\d{13}$/', $matric)) {
         $err = 'Matriculation number must be exactly 13 digits when provided.';
-    } elseif ($matric === '' && $form_no === '') {
-        $err = 'Provide either a matriculation number or a form number.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $err = 'Please provide a valid email address.';
     } elseif (strlen($pass) < 8) {
@@ -26,16 +26,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($pass !== $confirm) {
         $err = 'Passwords do not match.';
     } else {
-        $check = $pdo->prepare("SELECT student_id FROM students WHERE (matric_no IS NOT NULL AND matric_no=?) OR (form_no IS NOT NULL AND form_no=?) OR email=? LIMIT 1");
-        $check->execute([$matric ?: null, $form_no ?: null, $email]);
+        $check = $pdo->prepare("SELECT student_id FROM students WHERE form_no=? OR (matric_no IS NOT NULL AND matric_no=?) OR email=? LIMIT 1");
+        $check->execute([$form_no, $matric ?: null, $email]);
 
         if ($check->fetch()) {
-            $err = 'A student with these identity details or email already exists.';
+            $err = 'A student with this form number, matriculation number, or email already exists.';
         } else {
             $password_hash = password_hash($pass, PASSWORD_DEFAULT);
             $pdo->prepare("INSERT INTO students (matric_no, form_no, full_name, department, level, gender, phone, email, password) VALUES (?,?,?,?,?,?,?,?,?)")
-                ->execute([$matric ?: null, $form_no ?: null, $name, $dept, $level, $gender, $phone, $email, $password_hash]);
-            $msg = 'Registration successful! You can now login.';
+                ->execute([$matric ?: null, $form_no, $name, $dept, $level, $gender, $phone, $email, $password_hash]);
+            $msg = 'Registration successful! You can now login with your form number.';
         }
     }
 }
@@ -61,19 +61,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <form method="POST">
             <div class="form-row">
                 <div class="form-group">
-                    <label>Matriculation Number <small>(optional for new students)</small></label>
-                    <input type="text" name="matric_no" placeholder="13-digit matric number" pattern="\d{13}" maxlength="13">
+                    <label>Form Number <small>(required)</small></label>
+                    <input type="text" name="form_no" placeholder="e.g. F2405297" pattern="[FDfd][0-9]{7}" maxlength="8" minlength="8" style="text-transform:uppercase" required>
+                    <small>Use F or D followed by exactly 7 digits.</small>
                 </div>
                 <div class="form-group">
-                    <label>Full Name</label>
-                    <input type="text" name="full_name" placeholder="Surname First" required>
+                    <label>Matriculation Number <small>(optional)</small></label>
+                    <input type="text" name="matric_no" placeholder="13-digit matric number" pattern="\d{13}" maxlength="13">
                 </div>
             </div>
             <div class="form-row">
                 <div class="form-group">
+                    <label>Full Name</label>
+                    <input type="text" name="full_name" placeholder="Surname First" required>
+                </div>
+                <div class="form-group">
                     <label>Department</label>
                     <input type="text" name="department" placeholder="e.g. Computer Science" required>
                 </div>
+            </div>
+            <div class="form-row">
                 <div class="form-group">
                     <label>Level</label>
                     <select name="level" required>
@@ -84,8 +91,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <option value="HND2">HND 2</option>
                     </select>
                 </div>
-            </div>
-            <div class="form-row">
                 <div class="form-group">
                     <label>Gender</label>
                     <select name="gender" required>
@@ -94,10 +99,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <option value="Female">Female</option>
                     </select>
                 </div>
-                <div class="form-group">
-                    <label>Phone Number</label>
-                    <input type="text" name="phone" placeholder="e.g. 08012345678" required>
-                </div>
+            </div>
+            <div class="form-group">
+                <label>Phone Number</label>
+                <input type="text" name="phone" placeholder="e.g. 08012345678" required>
             </div>
             <div class="form-group">
                 <label>Email Address</label>
