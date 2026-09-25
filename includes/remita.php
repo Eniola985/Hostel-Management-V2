@@ -16,9 +16,8 @@ function remita_config(string $key): string {
     if (is_readable($file)) {
         $config = parse_ini_file($file);
         if (isset($config[$key])) {
-            // parse_ini_file() converts the literal value `true` to boolean true.
-            // Normalize it back to the string expected by the configuration checks.
-            if ($config[$key] === true) {
+            // parse_ini_file() may normalize true/yes/on to "1".
+            if ($config[$key] === true || $config[$key] === 1 || $config[$key] === '1') {
                 return 'true';
             }
             if ($config[$key] !== '') {
@@ -39,7 +38,11 @@ function verify_remita_rrr(string $rrr, float $expectedAmount): array {
     }
 
     // Explicit local development mode only. Never enable this in production.
-    $devMode = strtolower(remita_config('REMITA_DEV_MODE')) === 'true';
+    $devMode = in_array(
+        strtolower(trim(remita_config('REMITA_DEV_MODE'))),
+        ['true', '1', 'yes', 'on'],
+        true
+    );
     if ($devMode) {
         return [
             'verified' => true,
