@@ -15,8 +15,15 @@ function remita_config(string $key): string {
     $file = __DIR__ . '/../.env.local';
     if (is_readable($file)) {
         $config = parse_ini_file($file);
-        if (isset($config[$key]) && $config[$key] !== '') {
-            return (string)$config[$key];
+        if (isset($config[$key])) {
+            // parse_ini_file() converts the literal value `true` to boolean true.
+            // Normalize it back to the string expected by the configuration checks.
+            if ($config[$key] === true) {
+                return 'true';
+            }
+            if ($config[$key] !== '') {
+                return (string)$config[$key];
+            }
         }
     }
 
