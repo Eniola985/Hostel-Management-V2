@@ -2,9 +2,9 @@
 /**
  * Remita payment verification adapter.
  *
- * The live verification endpoint and credentials are deployment secrets and
- * must be supplied by the Polytechnic/Remita integration account.
- * The application fails closed when the integration is not configured.
+ * Live verification requires the Polytechnic/Remita integration credentials.
+ * A development-only verifier is available for local testing when explicitly
+ * enabled with REMITA_DEV_MODE=true in .env.local. Production remains fail-closed.
  */
 function remita_config(string $key): string {
     $value = getenv($key);
@@ -24,15 +24,31 @@ function remita_config(string $key): string {
 }
 
 function verify_remita_rrr(string $rrr, float $expectedAmount): array {
+    if (!preg_match('/^[0-9-]{8,30}$/', $rrr)) {
+        return [
+            'verified' => false,
+            'message' => 'Enter a valid Remita Retrieval Reference (RRR).'
+        ];
+    }
+
+    // Explicit local development mode only. Never enable this in production.
+    $devMode = strtolower(remita_config('REMITA_DEV_MODE')) === 'true';
+    if ($devMode) {
+        return [
+            'verified' => true,
+            'message' => 'Development payment verification passed. Live Remita verification is not enabled.',
+            'source' => 'Development Test'
+        ];
+    }
+
     $url = remita_config('REMITA_VERIFY_URL');
     $apiKey = remita_config('REMITA_API_KEY');
 
     if ($url === '') {
-        return ['verified' => false, 'message' => 'Remita verification is not configured on this server.'];
-    }
-
-    if (!preg_match('/^[0-9-]{8,30}$/', $rrr)) {
-        return ['verified' => false, 'message' => 'Enter a valid Remita Retrieval Reference (RRR).'];
+        return [
+            'verified' => false,
+            'message' => 'Remita verification is not configured on this server.'
+        ];
     }
 
     $payload = json_encode(['rrr' => $rrr, 'amount' => $expectedAmount]);
@@ -77,5 +93,9 @@ function verify_remita_rrr(string $rrr, float $expectedAmount): array {
         return ['verified' => false, 'message' => 'The RRR is not a verified payment for the required hostel fee.'];
     }
 
-    return ['verified' => true, 'message' => 'Payment verified successfully.'];
+    return [
+        'verified' => true,
+        'message' => 'Payment verified successfully.',
+        'source' => 'Remita'
+    ];
 }
