@@ -62,19 +62,8 @@ if ($report === 'students') {
 </style>
 </head>
 <body>
-<nav class="navbar no-print">
-    <div class="brand"><img src="../assets/POLYLOGO.jpg" alt="The Polytechnic, Ibadan logo"> Poly Ibadan HMS Admin</div>
-    <ul class="nav-links">
-        <li><a href="dashboard.php">Dashboard</a></li>
-        <li><a href="hostels.php">Hostels</a></li>
-        <li><a href="students.php">Students</a></li>
-        <li><a href="applications.php">Applications</a></li>
-        <li><a href="allocations.php">Allocations</a></li>
-        <li><a href="reports.php" class="active">Reports</a></li>
-        <li><a href="logout.php" class="logout">Logout</a></li>
-    </ul>
-</nav>
-<div class="wrapper">
+
+<div class="wrapper admin-layout">
 <aside class="sidebar no-print">
     <div class="user-info">
         <div class="avatar">A</div>

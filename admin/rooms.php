@@ -56,19 +56,8 @@ $rooms = $roomsStmt->fetchAll();
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-<nav class="navbar">
-    <div class="brand"><img src="../assets/POLYLOGO.jpg" alt="The Polytechnic, Ibadan logo"> Poly Ibadan HMS Admin</div>
-    <ul class="nav-links">
-        <li><a href="dashboard.php">Dashboard</a></li>
-        <li><a href="hostels.php" class="active">My Hostel</a></li>
-        <li><a href="students.php">Students</a></li>
-        <li><a href="applications.php">Applications</a></li>
-        <li><a href="allocations.php">Allocations</a></li>
-        <li><a href="reports.php">Reports</a></li>
-        <li><a href="logout.php" class="logout">Logout</a></li>
-    </ul>
-</nav>
-<div class="wrapper">
+
+<div class="wrapper admin-layout">
 <aside class="sidebar">
     <div class="user-info">
         <div class="avatar">A</div>
