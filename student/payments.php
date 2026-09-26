@@ -27,7 +27,7 @@ $payments = $payments->fetchAll();
     <div class="user-info">
         <div class="avatar"><?= strtoupper(substr($student['full_name'],0,1)) ?></div>
         <div class="name"><?= htmlspecialchars(explode(' ',$student['full_name'])[0]) ?></div>
-        <div class="role"><?= htmlspecialchars($student['matric_no']) ?></div>
+       <div class="role"><?= htmlspecialchars($student['form_no']) ?></div>
     </div>
     <nav class="sidebar-nav">
         <a href="dashboard.php">🏠 Dashboard</a>

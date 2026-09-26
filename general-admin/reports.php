@@ -52,7 +52,7 @@ if ($report === 'students') {
     $cols = [
         '#',
         'Full Name',
-        'Matric No',
+        'Form No',
         'Department',
         'Level',
         'Gender',
@@ -76,7 +76,7 @@ if ($report === 'students') {
     $cols = [
         '#',
         'Student',
-        'Matric No',
+        'Form No',
         'Department',
         'Hostel',
         'Room',
@@ -90,7 +90,7 @@ if ($report === 'students') {
                 a.status,
                 a.allocation_date,
                 s.full_name,
-                s.matric_no,
+                s.form_no,
                 s.department,
                 r.room_number,
                 h.hostel_name
@@ -155,7 +155,7 @@ if ($report === 'students') {
     $cols = [
         '#',
         'Student',
-        'Matric No',
+        'Form No',
         'Hostel Applied',
         'Payment Ref',
         'Date',
@@ -167,7 +167,7 @@ if ($report === 'students') {
             "SELECT
                 a.*,
                 s.full_name,
-                s.matric_no,
+                s.form_no,
                 h.hostel_name
              FROM applications a
              JOIN students s
@@ -186,7 +186,7 @@ if ($report === 'students') {
     $cols = [
         '#',
         'Student',
-        'Matric No',
+        'Form No',
         'Amount (₦)',
         'Reference',
         'Date',
@@ -198,7 +198,7 @@ if ($report === 'students') {
             "SELECT
                 p.*,
                 s.full_name,
-                s.matric_no
+                s.form_no
              FROM payments p
              JOIN students s
                 ON p.student_id = s.student_id
@@ -214,7 +214,7 @@ if ($report === 'students') {
     $cols = [
         '#',
         'Student',
-        'Matric No',
+        'Form No',
         'Amount (₦)',
         'Reference',
         'Date',
@@ -226,7 +226,7 @@ if ($report === 'students') {
             "SELECT
                 p.*,
                 s.full_name,
-                s.matric_no
+                s.form_no
              FROM payments p
              JOIN students s
                 ON p.student_id = s.student_id
@@ -670,7 +670,7 @@ $hostels = $hostelsStmt->fetchAll();
                                 </td>
 
                                 <td>
-                                    <?= htmlspecialchars($row['matric_no']) ?>
+                                    <?= htmlspecialchars($row['form_no']) ?>
                                 </td>
 
                                 <td>
@@ -701,7 +701,7 @@ $hostels = $hostelsStmt->fetchAll();
                                 </td>
 
                                 <td>
-                                    <?= htmlspecialchars($row['matric_no']) ?>
+                                    <?= htmlspecialchars($row['form_no']) ?>
                                 </td>
 
                                 <td>
@@ -772,7 +772,7 @@ $hostels = $hostelsStmt->fetchAll();
                                 </td>
 
                                 <td>
-                                    <?= htmlspecialchars($row['matric_no']) ?>
+                                    <?= htmlspecialchars($row['form_no']) ?>
                                 </td>
 
                                 <td>
@@ -812,7 +812,7 @@ $hostels = $hostelsStmt->fetchAll();
                                 </td>
 
                                 <td>
-                                    <?= htmlspecialchars($row['matric_no']) ?>
+                                    <?= htmlspecialchars($row['form_no']) ?>
                                 </td>
 
                                 <td>

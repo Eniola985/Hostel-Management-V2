@@ -49,7 +49,7 @@ if (isset($_POST['change_password'])) {
     <div class="user-info">
         <div class="avatar"><?= strtoupper(substr($student['full_name'],0,1)) ?></div>
         <div class="name"><?= htmlspecialchars(explode(' ',$student['full_name'])[0]) ?></div>
-        <div class="role"><?= htmlspecialchars($student['matric_no']) ?></div>
+        <div class="role"><?= htmlspecialchars($student['form_no']) ?></div>
     </div>
     <nav class="sidebar-nav">
         <a href="dashboard.php">🏠 Dashboard</a>
@@ -76,7 +76,7 @@ if (isset($_POST['change_password'])) {
             <div style="margin-bottom:16px;padding:16px;background:#f8fafc;border-radius:8px;">
                 <div style="display:grid;gap:12px;">
                     <div><strong>Full Name:</strong><br><span style="color:#475569;"><?= htmlspecialchars($student['full_name']) ?></span></div>
-                    <div><strong>Matric Number:</strong><br><span style="color:#475569;"><?= htmlspecialchars($student['matric_no']) ?></span></div>
+                    <div><strong>Form Number:</strong><br><span style="color:#475569;"><?= htmlspecialchars($student['form_no']) ?></span></div>
                     <div><strong>Department:</strong><br><span style="color:#475569;"><?= htmlspecialchars($student['department']) ?></span></div>
                     <div><strong>Level:</strong><br><span style="color:#475569;"><?= htmlspecialchars($student['level']) ?></span></div>
                     <div><strong>Gender:</strong><br><span style="color:#475569;"><?= htmlspecialchars($student['gender']) ?></span></div>

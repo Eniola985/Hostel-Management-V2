@@ -31,7 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$apps = $pdo->prepare("SELECT a.*, s.full_name, s.matric_no, s.department, s.level, s.gender, h.hostel_name, h.hostel_type 
+$apps = $pdo->prepare("SELECT a.*, s.full_name, s.form_no, s.department, s.level, s.gender, h.hostel_name, h.hostel_type 
     FROM applications a 
     JOIN students s ON a.student_id = s.student_id 
     JOIN hostels h ON a.hostel_id = h.hostel_id 
@@ -81,13 +81,14 @@ $apps = $apps->fetchAll();
                 <div class="empty-state"><span class="empty-icon">📋</span><p>No applications submitted yet.</p></div>
             <?php else: ?>
             <table>
-                <thead><tr><th>#</th><th>Student</th><th>Matric No</th><th>Dept / Level</th><th>Gender</th><th>Hostel Applied</th><th>Payment Ref</th><th>Date Applied</th><th>Status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>#</th><th>Student</th><th>Form No
+</th><th>Dept / Level</th><th>Gender</th><th>Hostel Applied</th><th>Payment Ref</th><th>Date Applied</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
                 <?php foreach ($apps as $i => $a): ?>
                 <tr>
                     <td><?= $i+1 ?></td>
                     <td><strong><?= htmlspecialchars($a['full_name']) ?></strong></td>
-                    <td><?= htmlspecialchars($a['matric_no']) ?></td>
+                    <td><?= htmlspecialchars($a['form_no']) ?></td>
                     <td><?= htmlspecialchars($a['department']) ?> / <?= htmlspecialchars($a['level']) ?></td>
                     <td><span class="badge <?= $a['gender']==='Male'?'badge-info':'badge-warning' ?>"><?= $a['gender'] ?></span></td>
                     <td><?= htmlspecialchars($a['hostel_name']) ?> <small>(<?= $a['hostel_type'] ?>)</small></td>

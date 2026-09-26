@@ -106,17 +106,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$existing) {
 $hostels = [];
 
 if ($student) {
+
     $hostelStmt = $pdo->prepare("SELECT h.*, COUNT(r.room_id) AS available_rooms
-        FROM hostels h
-        LEFT JOIN rooms r
-            ON r.hostel_id=h.hostel_id
-            AND r.status='Available'
-        WHERE h.hostel_type=?
-        GROUP BY h.hostel_id
-        ORDER BY h.hostel_name");
+    FROM hostels h
+    LEFT JOIN rooms r
+        ON r.hostel_id=h.hostel_id
+        AND r.status='Available'
+        AND r.occupied < r.capacity
+    WHERE h.hostel_type=?
+    GROUP BY h.hostel_id
+    ORDER BY h.hostel_name");
 
     $hostelStmt->execute([$student['gender']]);
     $hostels = $hostelStmt->fetchAll();
+}
+$availableRoomsByHostel = [];
+
+if ($student) {
+    $roomsStmt = $pdo->prepare("
+        SELECT
+            room_id,
+            hostel_id,
+            room_number,
+            capacity,
+            occupied,
+            status
+        FROM rooms
+        WHERE status='Available'
+          AND occupied < capacity
+        ORDER BY room_number
+    ");
+
+    $roomsStmt->execute();
+
+    foreach ($roomsStmt->fetchAll(PDO::FETCH_ASSOC) as $room) {
+        $availableRoomsByHostel[(int)$room['hostel_id']][] = $room;
+    }
 }
 ?>
 <!DOCTYPE html>
@@ -144,9 +169,8 @@ if ($student) {
         </div>
 
         <div class="role">
-            <?= $student ? htmlspecialchars($student['matric_no'] ?: $student['form_no']) : '' ?>
-        </div>
-    </div>
+    <?= $student ? htmlspecialchars($student['form_no']) : '' ?>
+</div>    </div>
 
     <nav class="sidebar-nav">
         <a href="dashboard.php">Dashboard</a>
@@ -228,20 +252,10 @@ if ($student) {
 
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;padding:16px;background:#f8fafc;border-radius:8px;">
 
-                    <div>
-                        <strong>Name:</strong>
-                        <?= htmlspecialchars($student['full_name']) ?>
-                    </div>
-
-                    <div>
-                        <strong>Matric No:</strong>
-                        <?= htmlspecialchars($student['matric_no'] ?: 'Not assigned') ?>
-                    </div>
-
-                    <div>
-                        <strong>Form No:</strong>
-                        <?= htmlspecialchars($student['form_no'] ?: 'Not assigned') ?>
-                    </div>
+                 <div>
+    <strong>Form Number:</strong>
+    <?= htmlspecialchars($student['form_no'] ?: 'Not assigned') ?>
+</div>
 
                     <div>
                         <strong>Department:</strong>
@@ -292,12 +306,17 @@ if ($student) {
                     <small>
                         You are only shown hostels available for your gender.
                     </small>
+<div
+    id="available-rooms-container"
+    style="display:none;margin-top:14px;padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;"
+>
+    <strong style="display:block;margin-bottom:10px;">
+        Available Rooms
+    </strong>
 
-                </div>
-
-                <div class="form-group">
-
-                    <label for="payment_ref">
+    <div id="available-rooms-list"></div>
+</div>                  
+  <label for="payment_ref">
                         Remita Retrieval Reference (RRR)
                     </label>
 
@@ -341,6 +360,75 @@ if ($student) {
 <div class="footer">
     &copy; <?= date('Y') ?> The Polytechnic, Ibadan
 </div>
+<script>
+const availableRoomsByHostel = <?= json_encode(
+    $availableRoomsByHostel,
+    JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES
+) ?>;
 
+const hostelSelect = document.getElementById('hostel_id');
+const roomsContainer = document.getElementById('available-rooms-container');
+const roomsList = document.getElementById('available-rooms-list');
+
+function showAvailableRooms() {
+    const hostelId = hostelSelect.value;
+
+    roomsList.innerHTML = '';
+
+    if (!hostelId) {
+        roomsContainer.style.display = 'none';
+        return;
+    }
+
+    const rooms = availableRoomsByHostel[hostelId] || [];
+
+    roomsContainer.style.display = 'block';
+
+    if (rooms.length === 0) {
+        roomsList.innerHTML = `
+            <div class="alert alert-warning" style="margin:0;">
+                There are currently no rooms with available space in this hostel.
+            </div>
+        `;
+        return;
+    }
+
+    rooms.forEach(room => {
+        const capacity = parseInt(room.capacity, 10);
+        const occupied = parseInt(room.occupied, 10);
+        const available = Math.max(0, capacity - occupied);
+
+        const roomDiv = document.createElement('div');
+
+        roomDiv.style.cssText = `
+            padding:12px;
+            margin-bottom:8px;
+            background:white;
+            border:1px solid #e2e8f0;
+            border-radius:6px;
+        `;
+
+        roomDiv.innerHTML = `
+            <strong>Room ${escapeHtml(room.room_number)}</strong>
+            <span style="color:#64748b;">
+                — ${occupied}/${capacity} occupied
+                — <strong>${available} space${available === 1 ? '' : 's'} available</strong>
+            </span>
+        `;
+
+        roomsList.appendChild(roomDiv);
+    });
+}
+
+function escapeHtml(value) {
+    const div = document.createElement('div');
+    div.textContent = value;
+    return div.innerHTML;
+}
+
+hostelSelect.addEventListener('change', showAvailableRooms);
+
+showAvailableRooms();
+</script>
 </body>
 </html>

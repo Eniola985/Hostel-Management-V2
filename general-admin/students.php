@@ -29,7 +29,7 @@ if ($search !== '') {
 
     $sql .= " AND (
         s.full_name LIKE ?
-        OR s.matric_no LIKE ?
+        OR s.form_no LIKE ?
         OR s.department LIKE ?
         OR s.phone LIKE ?
         OR h.hostel_name LIKE ?
@@ -197,7 +197,7 @@ $hostels = $hostelsStmt->fetchAll();
                     type="text"
                     name="search"
                     value="<?= htmlspecialchars($search) ?>"
-                    placeholder="Search name, matric, dept, hostel..."
+                    placeholder="Search name, form, dept, hostel..."
                     style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:Inter,sans-serif;font-size:0.875rem;width:280px;"
                 >
 
@@ -251,7 +251,7 @@ $hostels = $hostelsStmt->fetchAll();
                         <tr>
                             <th>#</th>
                             <th>Full Name</th>
-                            <th>Matric No</th>
+                            <th>Form No</th>
                             <th>Department</th>
                             <th>Level</th>
                             <th>Gender</th>
@@ -280,7 +280,7 @@ $hostels = $hostelsStmt->fetchAll();
                             </td>
 
                             <td>
-                                <?= htmlspecialchars($student['matric_no'] ?? '') ?>
+                                <?= htmlspecialchars($student['form_no'] ?? '') ?>
                             </td>
 
                             <td>

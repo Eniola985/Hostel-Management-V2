@@ -30,7 +30,7 @@ $payment = $payment->fetch();
     <div class="user-info">
         <div class="avatar"><?= strtoupper(substr($student['full_name'],0,1)) ?></div>
         <div class="name"><?= htmlspecialchars(explode(' ',$student['full_name'])[0]) ?></div>
-        <div class="role"><?= htmlspecialchars($student['matric_no']) ?></div>
+        <div class="role"><?= htmlspecialchars($student['form_no']) ?></div>
     </div>
     <nav class="sidebar-nav">
         <a href="dashboard.php">🏠 Dashboard</a>
@@ -116,8 +116,8 @@ $payment = $payment->fetch();
                     <div style="font-weight:600;"><?= htmlspecialchars($student['full_name']) ?></div>
                 </div>
                 <div>
-                    <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:4px;">Matric Number</div>
-                    <div style="font-weight:600;"><?= htmlspecialchars($student['matric_no']) ?></div>
+                    <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:4px;">Form Number</div>
+                    <div style="font-weight:600;"><?= htmlspecialchars($student['form_no']) ?></div>
                 </div>
                 <div>
                     <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:4px;">Hostel Applied</div>

@@ -15,7 +15,6 @@ $sql = "SELECT
             p.verification_source,
             p.verified_at,
             s.full_name,
-            s.matric_no,
             s.form_no
         FROM payments p
         JOIN students s ON s.student_id = p.student_id
@@ -27,12 +26,10 @@ $params = [$admin_hostel_id];
 if ($studentSearch !== '') {
     $sql .= " AND (
         s.full_name LIKE ?
-        OR s.matric_no LIKE ?
         OR s.form_no LIKE ?
     )";
 
     $searchLike = "%{$studentSearch}%";
-    $params[] = $searchLike;
     $params[] = $searchLike;
     $params[] = $searchLike;
 }
@@ -101,7 +98,7 @@ $payments = $stmt->fetchAll();
                         id="student_search"
                         name="student_search"
                         value="<?= htmlspecialchars($studentSearch) ?>"
-                        placeholder="Name, matric number or form number"
+                        placeholder="Name or form number"
                     >
                 </div>
 
@@ -126,7 +123,7 @@ $payments = $stmt->fetchAll();
                 <tr>
                     <th>#</th>
                     <th>Student</th>
-                    <th>Matric / Form No.</th>
+                    <th>Form No.</th>
                     <th>Amount</th>
                     <th>Reference (RRR)</th>
                     <th>Date</th>
@@ -139,9 +136,8 @@ $payments = $stmt->fetchAll();
                     <td><?= $i + 1 ?></td>
                     <td><?= htmlspecialchars($payment['full_name']) ?></td>
                     <td>
-                        <?= htmlspecialchars($payment['matric_no'] ?: ($payment['form_no'] ?: 'N/A')) ?>
-                    </td>
-                    <td>?<?= number_format((float)$payment['amount'], 2) ?></td>
+                        <?= htmlspecialchars($payment['form_no'] ?: 'N/A') ?>
+                    </td><td>?<?= number_format((float)$payment['amount'], 2) ?></td>
                     <td><?= htmlspecialchars($payment['payment_ref']) ?></td>
                     <td>
                         <?= htmlspecialchars(date('d M Y H:i', strtotime($payment['payment_date']))) ?>

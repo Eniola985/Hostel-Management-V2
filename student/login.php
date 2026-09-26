@@ -18,7 +18,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             session_regenerate_id(true);
             $_SESSION['student_id'] = $student['student_id'];
             $_SESSION['student_name'] = $student['full_name'];
-            $_SESSION['student_matric'] = $student['matric_no'];
             $_SESSION['student_form_no'] = $student['form_no'];
             header('Location: dashboard.php');
             exit;

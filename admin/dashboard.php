@@ -19,7 +19,7 @@ $pending = $pdo->prepare("SELECT COUNT(*) FROM applications WHERE hostel_id=? AN
 $pending->execute([$admin_hostel_id]);
 $pending = $pending->fetchColumn();
 
-$recent = $pdo->prepare("SELECT a.*, s.full_name, s.matric_no, r.room_number, h.hostel_name FROM allocations a JOIN students s ON a.student_id=s.student_id JOIN rooms r ON a.room_id=r.room_id JOIN hostels h ON r.hostel_id=h.hostel_id WHERE r.hostel_id=? ORDER BY a.allocation_date DESC LIMIT 5");
+$recent = $pdo->prepare("SELECT a.*, s.full_name, s.form_no, r.room_number, h.hostel_name FROM allocations a JOIN students s ON a.student_id=s.student_id JOIN rooms r ON a.room_id=r.room_id JOIN hostels h ON r.hostel_id=h.hostel_id WHERE r.hostel_id=? ORDER BY a.allocation_date DESC LIMIT 5");
 $recent->execute([$admin_hostel_id]);
 $recent = $recent->fetchAll();
 ?>
@@ -113,12 +113,13 @@ $recent = $recent->fetchAll();
                     <div class="empty-state"><span class="empty-icon">📭</span><p>No allocations yet.</p></div>
                 <?php else: ?>
                 <table>
-                    <thead><tr><th>Student</th><th>Matric No</th><th>Hostel</th><th>Room</th><th>Date</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Student</th><th>Form No
+</th><th>Hostel</th><th>Room</th><th>Date</th><th>Status</th></tr></thead>
                     <tbody>
                     <?php foreach ($recent as $r): ?>
                         <tr>
                             <td><?= htmlspecialchars($r['full_name']) ?></td>
-                            <td><?= htmlspecialchars($r['matric_no']) ?></td>
+                            <td><?= htmlspecialchars($r['form_no']) ?></td>
                             <td><?= htmlspecialchars($r['hostel_name']) ?></td>
                             <td>Room <?= htmlspecialchars($r['room_number']) ?></td>
                             <td><?= date('d M Y', strtotime($r['allocation_date'])) ?></td>

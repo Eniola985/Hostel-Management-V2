@@ -18,28 +18,28 @@ $cols = [];
 
 if ($report === 'students') {
     $title = 'Student Registration Report';
-    $cols = ['#','Full Name','Matric No','Department','Level','Gender','Phone','Registered'];
+    $cols = ['#','Full Name','Form No','Department','Level','Gender','Phone','Registered'];
     $data = $pdo->query("SELECT * FROM students ORDER BY full_name")->fetchAll();
 } elseif ($report === 'allocations') {
     $title = 'Room Allocation Report';
-    $cols = ['#','Student','Matric No','Department','Hostel','Room','Date','Status'];
-    $data = $pdo->query("SELECT a.*, s.full_name, s.matric_no, s.department, r.room_number, h.hostel_name FROM allocations a JOIN students s ON a.student_id=s.student_id JOIN rooms r ON a.room_id=r.room_id JOIN hostels h ON r.hostel_id=h.hostel_id ORDER BY a.allocation_date DESC")->fetchAll();
+    $cols = ['#','Student','Form No','Department','Hostel','Room','Date','Status'];
+    $data = $pdo->query("SELECT a.*, s.full_name, s.form_no, s.department, r.room_number, h.hostel_name FROM allocations a JOIN students s ON a.student_id=s.student_id JOIN rooms r ON a.room_id=r.room_id JOIN hostels h ON r.hostel_id=h.hostel_id ORDER BY a.allocation_date DESC")->fetchAll();
 } elseif ($report === 'occupancy') {
     $title = 'Hostel Occupancy Report';
     $cols = ['#','Hostel','Type','Total Rooms','Occupied','Available','Occupancy %'];
     $data = $pdo->query("SELECT h.*, COUNT(r.room_id) as total, SUM(CASE WHEN r.status='Available' THEN 1 ELSE 0 END) as avail FROM hostels h LEFT JOIN rooms r ON h.hostel_id=r.hostel_id GROUP BY h.hostel_id")->fetchAll();
 } elseif ($report === 'applications') {
     $title = 'Applications Report';
-    $cols = ['#','Student','Matric No','Hostel Applied','Payment Ref','Date','Status'];
-    $data = $pdo->query("SELECT a.*, s.full_name, s.matric_no, h.hostel_name FROM applications a JOIN students s ON a.student_id=s.student_id JOIN hostels h ON a.hostel_id=h.hostel_id ORDER BY a.applied_at DESC")->fetchAll();
+    $cols = ['#','Student','Form No','Hostel Applied','Payment Ref','Date','Status'];
+    $data = $pdo->query("SELECT a.*, s.full_name, s.form_no, h.hostel_name FROM applications a JOIN students s ON a.student_id=s.student_id JOIN hostels h ON a.hostel_id=h.hostel_id ORDER BY a.applied_at DESC")->fetchAll();
 } elseif ($report === 'payments') {
     $title = 'Payments Records Report';
-    $cols = ['#','Student','Matric No','Amount (₦)','Reference','Date','Verified'];
-    $data = $pdo->query("SELECT p.*, s.full_name, s.matric_no FROM payments p JOIN students s ON p.student_id=s.student_id ORDER BY p.payment_date DESC")->fetchAll();
+    $cols = ['#','Student','Form No','Amount (₦)','Reference','Date','Verified'];
+    $data = $pdo->query("SELECT p.*, s.full_name, s.form_no FROM payments p JOIN students s ON p.student_id=s.student_id ORDER BY p.payment_date DESC")->fetchAll();
 } elseif ($report === 'payment_confirmations') {
     $title = 'Payment Confirmation Report';
-    $cols = ['#','Student','Matric No','Amount (₦)','Reference','Date','Verified'];
-    $data = $pdo->query("SELECT p.*, s.full_name, s.matric_no FROM payments p JOIN students s ON p.student_id=s.student_id WHERE p.verified='Yes' ORDER BY p.payment_date DESC")->fetchAll();
+    $cols = ['#','Student','Form No','Amount (₦)','Reference','Date','Verified'];
+    $data = $pdo->query("SELECT p.*, s.full_name, s.form_no FROM payments p JOIN students s ON p.student_id=s.student_id WHERE p.verified='Yes' ORDER BY p.payment_date DESC")->fetchAll();
 }
 ?>
 <!DOCTYPE html>
@@ -129,7 +129,7 @@ if ($report === 'students') {
                 <td><?= $i+1 ?></td>
                 <?php if ($report === 'students'): ?>
                     <td><?= htmlspecialchars($row['full_name']) ?></td>
-                    <td><?= htmlspecialchars($row['matric_no']) ?></td>
+                    <td><?= htmlspecialchars($row['form_no']) ?></td>
                     <td><?= htmlspecialchars($row['department']) ?></td>
                     <td><?= htmlspecialchars($row['level']) ?></td>
                     <td><?= htmlspecialchars($row['gender']) ?></td>
@@ -137,7 +137,7 @@ if ($report === 'students') {
                     <td><?= date('d M Y', strtotime($row['created_at'])) ?></td>
                 <?php elseif ($report === 'allocations'): ?>
                     <td><?= htmlspecialchars($row['full_name']) ?></td>
-                    <td><?= htmlspecialchars($row['matric_no']) ?></td>
+                    <td><?= htmlspecialchars($row['form_no']) ?></td>
                     <td><?= htmlspecialchars($row['department']) ?></td>
                     <td><?= htmlspecialchars($row['hostel_name']) ?></td>
                     <td>Room <?= htmlspecialchars($row['room_number']) ?></td>
@@ -152,14 +152,14 @@ if ($report === 'students') {
                     <td><?= $row['total'] > 0 ? round((($row['total'] - ($row['avail'] ?? 0)) / $row['total']) * 100) : 0 ?>%</td>
                 <?php elseif ($report === 'applications'): ?>
                     <td><?= htmlspecialchars($row['full_name']) ?></td>
-                    <td><?= htmlspecialchars($row['matric_no']) ?></td>
+                    <td><?= htmlspecialchars($row['form_no']) ?></td>
                     <td><?= htmlspecialchars($row['hostel_name']) ?></td>
                     <td><?= htmlspecialchars($row['payment_ref'] ?? 'N/A') ?></td>
                     <td><?= date('d M Y', strtotime($row['applied_at'])) ?></td>
                     <td><span class="badge <?= $row['status']==='Approved'?'badge-success':($row['status']==='Rejected'?'badge-danger':'badge-warning') ?>"><?= $row['status'] ?></span></td>
                 <?php elseif ($report === 'payments'): ?>
                     <td><?= htmlspecialchars($row['full_name']) ?></td>
-                    <td><?= htmlspecialchars($row['matric_no']) ?></td>
+                    <td><?= htmlspecialchars($row['form_no']) ?></td>
                     <td>₦<?= number_format($row['amount'], 2) ?></td>
                     <td><?= htmlspecialchars($row['payment_ref']) ?></td>
                     <td><?= date('d M Y', strtotime($row['payment_date'])) ?></td>

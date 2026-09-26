@@ -14,7 +14,7 @@ $params = [$admin_hostel_id];
 if ($search !== '') {
     $sql .= " AND (
         s.full_name LIKE ?
-        OR s.matric_no LIKE ?
+        OR s.form_no LIKE ?
         OR s.department LIKE ?
     )";
 
@@ -50,11 +50,11 @@ $students = $stmt->fetchAll();
     </div>
 
     <nav class="sidebar-nav">
-        <a href="dashboard.php">ðŸ  Dashboard</a>
-        <a href="hostels.php">ðŸ¨ Manage Hostels</a>
+        <a href="dashboard.php">   Dashboard</a>
+        <a href="hostels.php">  Manage Hostels</a>
         <a href="students.php" class="active">ðŸ‘¥ Students</a>
         <a href="applications.php">ðŸ“‹ Applications</a>
-        <a href="allocations.php">ðŸ› Allocations</a>
+        <a href="allocations.php">  Allocations</a>
         <a href="payments.php">ðŸ’° Payments</a>
         <a href="reports.php">ðŸ“Š Reports</a>
         <a href="logout.php">ðŸšª Logout</a>
@@ -76,7 +76,7 @@ $students = $stmt->fetchAll();
                     type="text"
                     name="search"
                     value="<?= htmlspecialchars($search) ?>"
-                    placeholder="Search name, matric number, dept..."
+                    placeholder="Search name, form number, dept..."
                     style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:Inter,sans-serif;font-size:0.875rem;width:260px;"
                 >
                 <button type="submit" class="btn btn-info btn-sm">Search</button>
@@ -102,7 +102,7 @@ $students = $stmt->fetchAll();
                     <tr>
                         <th>#</th>
                         <th>Full Name</th>
-                        <th>Matric No</th>
+                        <th>Form No</th>
                         <th>Department</th>
                         <th>Level</th>
                         <th>Gender</th>
@@ -120,7 +120,7 @@ $students = $stmt->fetchAll();
                             <strong><?= htmlspecialchars($s['full_name']) ?></strong>
                         </td>
 
-                        <td><?= htmlspecialchars($s['matric_no'] ?? '') ?></td>
+                        <td><?= htmlspecialchars($s['form_no'] ?? '') ?></td>
 
                         <td><?= htmlspecialchars($s['department']) ?></td>
 

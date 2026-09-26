@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once '../includes/admin_auth.php';
 
 $hostel = current_admin_hostel($pdo);
@@ -234,7 +234,7 @@ if (isset($_GET['vacate'])) {
 }
 
 // Current active and vacated allocations in this hostel.
-$allocStmt = $pdo->prepare("SELECT a.*, s.full_name, s.matric_no, s.department, s.level,
+$allocStmt = $pdo->prepare("SELECT a.*, s.full_name, s.form_no, s.department, s.level,
         r.room_number, h.hostel_name
     FROM allocations a
     JOIN students s ON a.student_id=s.student_id
@@ -314,7 +314,7 @@ $avail_rooms = $roomsStmt->fetchAll();
 <main class="main">
 
     <div class="page-title">
-        Room Allocations — <?= htmlspecialchars($hostel['hostel_name']) ?>
+        Room Allocations � <?= htmlspecialchars($hostel['hostel_name']) ?>
     </div>
 
     <div class="page-subtitle">
@@ -367,7 +367,7 @@ $avail_rooms = $roomsStmt->fetchAll();
                             <?= $preselect_student === (int)$s['student_id'] ? 'selected' : '' ?>
                         >
                             <?= htmlspecialchars($s['full_name']) ?>
-                            (<?= htmlspecialchars($s['matric_no'] ?: $s['form_no']) ?>)
+                            (<?= htmlspecialchars($s['form_no']) ?>)
                         </option>
 
                         <?php endforeach; ?>
@@ -397,7 +397,7 @@ $avail_rooms = $roomsStmt->fetchAll();
                         <option value="<?= (int)$r['room_id'] ?>">
                             Room <?= htmlspecialchars($r['room_number']) ?>
                             (<?= (int)$r['occupied'] ?>/<?= (int)$r['capacity'] ?> occupied)
-                            — <?= (int)$r['uses_bunks'] === 1 ? 'Uses Bunks' : 'No Bunks' ?>
+                            � <?= (int)$r['uses_bunks'] === 1 ? 'Uses Bunks' : 'No Bunks' ?>
                         </option>
 
                         <?php endforeach; ?>
@@ -449,7 +449,7 @@ $avail_rooms = $roomsStmt->fetchAll();
         <?php if (!$allocs): ?>
 
             <div class="empty-state">
-                <span class="empty-icon">🛏</span>
+                <span class="empty-icon">??</span>
                 <p>No finalized allocations in this hostel yet.</p>
             </div>
 
@@ -485,8 +485,7 @@ $avail_rooms = $roomsStmt->fetchAll();
                 </td>
 
                 <td>
-                    <?= htmlspecialchars($a['matric_no'] ?: '') ?: htmlspecialchars($a['form_no'] ?? '') ?>
-                </td>
+                    <?= htmlspecialchars($a['form_no'] ?? '') ?>
 
                 <td>
                     <?= htmlspecialchars($a['department']) ?>
