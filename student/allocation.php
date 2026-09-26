@@ -64,12 +64,15 @@ $allocation = $allocation->fetch();
 
     <!-- Print Header -->
     <div class="print-header">
-        <h2>THE POLYTECHNIC, IBADAN</h2>
-        <p>Computerized Hostel Accommodation Management System</p>
-        <h3>ROOM ALLOCATION NOTICE</h3>
-        <p>Session: <?= date('Y') ?>/<?= date('Y')+1 ?></p>
-    </div>
+    <img src="../assets/POLYLOGO.jpg"
+         alt="The Polytechnic, Ibadan Logo"
+         style="width:90px;height:90px;object-fit:contain;margin-bottom:10px;">
 
+    <h2>THE POLYTECHNIC, IBADAN</h2>
+    <p>Computerized Hostel Accommodation Management System</p>
+    <h3>ROOM ALLOCATION NOTICE</h3>
+    <p>Session: <?= date('Y') ?>/<?= date('Y')+1 ?></p>
+</div>
     <div class="no-print" style="margin-bottom:16px;">
         <button onclick="window.print()" class="btn btn-info">🖨 Print Allocation Letter</button>
     </div>

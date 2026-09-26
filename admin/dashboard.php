@@ -2,7 +2,9 @@
 require_once '../includes/admin_auth.php';
 $hostel = current_admin_hostel($pdo);
 
-$students = $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
+$students = $pdo->prepare("SELECT COUNT(DISTINCT student_id) FROM applications WHERE hostel_id=?");
+$students->execute([$admin_hostel_id]);
+$students = $students->fetchColumn();
 $hostels = 1;
 $rooms = $pdo->prepare("SELECT COUNT(*) FROM rooms WHERE hostel_id=?");
 $rooms->execute([$admin_hostel_id]);
