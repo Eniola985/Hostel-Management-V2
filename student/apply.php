@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 session_start();
 if (!isset($_SESSION['student_id'])) { header('Location: login.php'); exit; }
 
@@ -160,9 +160,7 @@ if ($student) {
 <aside class="sidebar">
 
     <div class="user-info">
-        <div class="avatar">
-            <?= $student ? htmlspecialchars(strtoupper(substr($student['full_name'],0,1))) : '?' ?>
-        </div>
+        <div class="avatar"><?php if (!empty($student['profile_photo'])): ?><img src="../<?= htmlspecialchars($student['profile_photo']) ?>" alt="Student photograph" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"><?php else: ?><?= $student ? htmlspecialchars(strtoupper(substr($student['full_name'],0,1))) : '?' ?><?php endif; ?></div>
 
         <div class="name">
             <?= $student ? htmlspecialchars(explode(' ',$student['full_name'])[0]) : 'Student' ?>
@@ -228,7 +226,7 @@ if ($student) {
             The system will verify the RRR with Remita before creating your application.
 
             Hostel fee:
-            <strong>₦<?= number_format($hostelFee, 2) ?></strong>.
+            <strong>?<?= number_format($hostelFee, 2) ?></strong>.
         </div>
 
         <div class="alert alert-info">
@@ -411,8 +409,8 @@ function showAvailableRooms() {
         roomDiv.innerHTML = `
             <strong>Room ${escapeHtml(room.room_number)}</strong>
             <span style="color:#64748b;">
-                — ${occupied}/${capacity} occupied
-                — <strong>${available} space${available === 1 ? '' : 's'} available</strong>
+                � ${occupied}/${capacity} occupied
+                � <strong>${available} space${available === 1 ? '' : 's'} available</strong>
             </span>
         `;
 
@@ -432,3 +430,5 @@ showAvailableRooms();
 </script>
 </body>
 </html>
+
+

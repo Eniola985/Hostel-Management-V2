@@ -47,7 +47,7 @@ if (isset($_POST['change_password'])) {
 <div class="wrapper">
 <aside class="sidebar">
     <div class="user-info">
-        <div class="avatar"><?= strtoupper(substr($student['full_name'],0,1)) ?></div>
+        <div class="avatar"><?php if (!empty($student['profile_photo'])): ?><img src="../<?= htmlspecialchars($student['profile_photo']) ?>" alt="Student photograph" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"><?php else: ?><?= strtoupper(substr($student['full_name'],0,1)) ?><?php endif; ?></div>
         <div class="name"><?= htmlspecialchars(explode(' ',$student['full_name'])[0]) ?></div>
         <div class="role"><?= htmlspecialchars($student['form_no']) ?></div>
     </div>
@@ -120,3 +120,4 @@ if (isset($_POST['change_password'])) {
 <div class="footer">&copy; <?= date('Y') ?> The Polytechnic, Ibadan</div>
 </body>
 </html>
+

@@ -425,7 +425,7 @@ $csrf = csrf_token();
 
 <aside class="sidebar no-print">
     <div class="user-info">
-        <div class="avatar"><?= strtoupper(substr($student['full_name'], 0, 1)) ?></div>
+        <div class="avatar"><?php if (!empty($student['profile_photo'])): ?><img src="../<?= htmlspecialchars($student['profile_photo']) ?>" alt="Student photograph" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"><?php else: ?><?= strtoupper(substr($student['full_name'], 0, 1)) ?><?php endif; ?></div>
         <div class="name"><?= htmlspecialchars(explode(' ', $student['full_name'])[0]) ?></div>
        <div class="role"><?= htmlspecialchars($student['form_no']) ?></div>    </div>
 
@@ -534,7 +534,7 @@ $csrf = csrf_token();
                     </div>
                 </div>
 
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+                <div style="display:flex;align-items:center;gap:18px;margin-bottom:24px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">                    <div style="width:90px;height:110px;border-radius:8px;overflow:hidden;border:1px solid #cbd5e1;background:#e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">                        <?php if (!empty($student['profile_photo'])): ?>                            <img src="../<?= htmlspecialchars($student['profile_photo']) ?>" alt="Student photograph" style="width:100%;height:100%;object-fit:cover;">                        <?php else: ?>                            <span style="font-size:2rem;font-weight:700;color:#64748b;"><?= strtoupper(substr($student['full_name'], 0, 1)) ?></span>                        <?php endif; ?>                    </div>                    <div>                        <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:4px;">Student Photograph</div>                        <div style="font-weight:600;color:#1e3a5f;"><?= htmlspecialchars($student['full_name']) ?></div>                    </div>                </div>                <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
 
                     <div>
                         <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:4px;">
@@ -764,3 +764,4 @@ $csrf = csrf_token();
 
 </body>
 </html>
+
