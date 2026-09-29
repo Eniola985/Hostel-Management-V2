@@ -92,7 +92,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['choose_bunk'])) {
                     throw new RuntimeException('The assigned room has an invalid capacity.');
                 }
 
-                if ((int)$application['occupied'] >= $capacity) {
+                if ((int)$application['uses_bunks'] !== 1 && (int)$application['occupied'] >= $capacity) {
                     throw new RuntimeException(
                         'There are no remaining spaces in the assigned room.'
                     );
@@ -132,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['choose_bunk'])) {
                  */
                 $occupied = (int)$room['occupied'];
 
-                if ($occupied >= (int)$room['capacity']) {
+                if ((int)$room['uses_bunks'] !== 1 && $occupied >= (int)$room['capacity']) {
                     throw new RuntimeException(
                         'There are no remaining spaces in the assigned room.'
                     );
@@ -764,4 +764,7 @@ $csrf = csrf_token();
 
 </body>
 </html>
+
+
+
 

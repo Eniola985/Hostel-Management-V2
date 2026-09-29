@@ -7,85 +7,99 @@ $msg = '';
 $err = '';
 $preselect_student = (int)($_GET['student_id'] ?? 0);
 
-// Assign a room to an approved student.
-// For bunk-enabled hostels, this only assigns the room.
-// The student chooses the bunk later.
-if (isset($_POST['allocate'])) {
+// Confirm the room/bunk already selected by an approved student.
+if (isset($_POST['confirm_allocation'])) {
     $student_id = (int)($_POST['student_id'] ?? 0);
-    $room_id = (int)($_POST['room_id'] ?? 0);
+    $app_id = (int)($_POST['app_id'] ?? 0);
 
-    if ($student_id <= 0 || $room_id <= 0) {
-        $err = 'Please select a student and room.';
+    if ($student_id <= 0 || $app_id <= 0) {
+        $err = 'The selected application is not valid.';
     } else {
         try {
             $pdo->beginTransaction();
 
-            // Confirm the student has an approved application in this hostel.
-            $approved = $pdo->prepare("SELECT ap.app_id
+            // Lock and confirm the approved application belongs to this hostel.
+            $approved = $pdo->prepare("
+                SELECT ap.*, h.hostel_name, h.hostel_type, h.uses_bunks
                 FROM applications ap
-                WHERE ap.student_id=?
+                JOIN hostels h ON h.hostel_id=ap.hostel_id
+                WHERE ap.app_id=?
+                  AND ap.student_id=?
                   AND ap.hostel_id=?
                   AND ap.status='Approved'
-                  AND ap.preferred_room_id IS NULL
                 LIMIT 1
-                FOR UPDATE");
-            $approved->execute([$student_id, $admin_hostel_id]);
+                FOR UPDATE
+            ");
+            $approved->execute([
+                $app_id,
+                $student_id,
+                $admin_hostel_id
+            ]);
+
             $approvedApplication = $approved->fetch();
 
             if (!$approvedApplication) {
                 throw new RuntimeException(
-                    'Only students with an approved application awaiting room assignment can be allocated here.'
+                    'Only an approved application in your hostel can be allocated.'
                 );
             }
 
-            // Lock the room row so concurrent allocations cannot overfill it.
-            $roomStmt = $pdo->prepare("SELECT r.*, h.hostel_name, h.hostel_type, h.uses_bunks
+            $room_id = (int)($approvedApplication['preferred_room_id'] ?? 0);
+            $bunk_number = trim((string)($approvedApplication['preferred_bunk'] ?? ''));
+
+            if ($room_id <= 0) {
+                throw new RuntimeException(
+                    'This student has not selected a room.'
+                );
+            }
+
+            if ((int)$approvedApplication['uses_bunks'] === 1 && $bunk_number === '') {
+                throw new RuntimeException(
+                    'This student has not selected a bunk.'
+                );
+            }
+
+            if ((int)$approvedApplication['uses_bunks'] !== 1) {
+                $bunk_number = null;
+            }
+
+            // Lock the selected room.
+            $roomStmt = $pdo->prepare("
+                SELECT r.*, h.hostel_name, h.hostel_type, h.uses_bunks
                 FROM rooms r
                 JOIN hostels h ON h.hostel_id=r.hostel_id
                 WHERE r.room_id=?
                   AND r.hostel_id=?
                 LIMIT 1
-                FOR UPDATE");
-            $roomStmt->execute([$room_id, $admin_hostel_id]);
+                FOR UPDATE
+            ");
+            $roomStmt->execute([
+                $room_id,
+                $admin_hostel_id
+            ]);
+
             $room = $roomStmt->fetch();
 
             if (!$room) {
                 throw new RuntimeException(
-                    'Selected room is not available in your hostel.'
+                    'The student selected a room that is not in your hostel.'
                 );
             }
 
             if ($room['status'] !== 'Available') {
                 throw new RuntimeException(
-                    'Selected room is already full.'
+                    'The selected room is currently full or unavailable.'
                 );
             }
 
-            // Recalculate the actual active allocation count while the room is locked.
-            $occupancyStmt = $pdo->prepare("SELECT COUNT(*)
+            // Prevent duplicate active allocation for this student.
+            $activeAllocation = $pdo->prepare("
+                SELECT allocation_id
                 FROM allocations
-                WHERE room_id=?
-                  AND status='Active'");
-            $occupancyStmt->execute([$room_id]);
-            $actualOccupied = (int)$occupancyStmt->fetchColumn();
-
-            if ($actualOccupied >= (int)$room['capacity']) {
-                $pdo->prepare("UPDATE rooms SET occupied=?, status='Full' WHERE room_id=?")
-                    ->execute([$actualOccupied, $room_id]);
-
-                throw new RuntimeException(
-                    'Selected room has no available space.'
-                );
-            }
-
-            // Make sure the student's application has not somehow acquired
-            // an active allocation elsewhere.
-            $activeAllocation = $pdo->prepare("SELECT a.allocation_id
-                FROM allocations a
-                JOIN rooms r ON r.room_id=a.room_id
-                WHERE a.student_id=?
-                  AND a.status='Active'
-                LIMIT 1");
+                WHERE student_id=?
+                  AND status='Active'
+                LIMIT 1
+            ");
             $activeAllocation->execute([$student_id]);
 
             if ($activeAllocation->fetch()) {
@@ -94,83 +108,131 @@ if (isset($_POST['allocate'])) {
                 );
             }
 
-            if ((int)$room['uses_bunks'] === 1) {
-                // Bunk-enabled hostel:
-                // Assign only the room. The student chooses the bunk later.
-                $pdo->prepare("UPDATE applications
-                    SET preferred_room_id=?, preferred_bunk=NULL
-                    WHERE app_id=?
-                      AND hostel_id=?
-                      AND status='Approved'")
-                    ->execute([
-                        $room_id,
-                        $approvedApplication['app_id'],
-                        $admin_hostel_id
-                    ]);
+            // Recalculate actual active occupancy while the room is locked.
+            $occupancyStmt = $pdo->prepare("
+                SELECT COUNT(*)
+                FROM allocations
+                WHERE room_id=?
+                  AND status='Active'
+            ");
+            $occupancyStmt->execute([$room_id]);
+            $actualOccupied = (int)$occupancyStmt->fetchColumn();
 
-                // Keep the room occupancy synchronized.
-                $newOccupied = $actualOccupied + 1;
-                $newStatus = $newOccupied >= (int)$room['capacity']
-                    ? 'Full'
-                    : 'Available';
-
-                // Do not create an allocation yet because the student
-                // still needs to choose a bunk.
-                $pdo->prepare("UPDATE rooms
-                    SET occupied=?, status=?
-                    WHERE room_id=?
-                      AND hostel_id=?")
-                    ->execute([
-                        $newOccupied,
-                        $newStatus,
-                        $room_id,
-                        $admin_hostel_id
-                    ]);
-
-                $pdo->commit();
-
-                $msg = 'Room assigned successfully. The student can now choose an available bunk.';
-            } else {
-                // No-bunk hostel:
-                // Room assignment completes the allocation immediately.
-                $pdo->prepare("INSERT INTO allocations
-                    (student_id, room_id, bunk_number)
-                    VALUES (?,?,NULL)")
-                    ->execute([$student_id, $room_id]);
-
-                $newOccupied = $actualOccupied + 1;
-                $newStatus = $newOccupied >= (int)$room['capacity']
-                    ? 'Full'
-                    : 'Available';
-
-                $pdo->prepare("UPDATE rooms
-                    SET occupied=?, status=?
-                    WHERE room_id=?
-                      AND hostel_id=?")
-                    ->execute([
-                        $newOccupied,
-                        $newStatus,
-                        $room_id,
-                        $admin_hostel_id
-                    ]);
-
-                $pdo->prepare("UPDATE applications
-                    SET status='Allocated',
-                        preferred_room_id=?,
-                        preferred_bunk=NULL
-                    WHERE app_id=?
-                      AND hostel_id=?
-                      AND status='Approved'")
-                    ->execute([
-                        $room_id,
-                        $approvedApplication['app_id'],
-                        $admin_hostel_id
-                    ]);
-
-                $pdo->commit();
-
-                $msg = 'Room allocated successfully.';
+            if ($actualOccupied >= (int)$room['capacity']) {
+                throw new RuntimeException(
+                    'The selected room has no available space.'
+                );
             }
+
+            if ((int)$room['uses_bunks'] === 1) {
+                // The selected bunk must not already be occupied.
+                $bunkAllocation = $pdo->prepare("
+                    SELECT allocation_id
+                    FROM allocations
+                    WHERE room_id=?
+                      AND bunk_number=?
+                      AND status='Active'
+                    LIMIT 1
+                ");
+                $bunkAllocation->execute([
+                    $room_id,
+                    $bunk_number
+                ]);
+
+                if ($bunkAllocation->fetch()) {
+                    throw new RuntimeException(
+                        'The selected bunk has already been taken.'
+                    );
+                }
+
+                // The selected bunk must not be reserved by another application.
+                $bunkReservation = $pdo->prepare("
+                    SELECT app_id
+                    FROM applications
+                    WHERE preferred_room_id=?
+                      AND preferred_bunk=?
+                      AND status IN ('Pending','Approved')
+                      AND app_id<>?
+                    LIMIT 1
+                ");
+                $bunkReservation->execute([
+                    $room_id,
+                    $bunk_number,
+                    $app_id
+                ]);
+
+                if ($bunkReservation->fetch()) {
+                    throw new RuntimeException(
+                        'The selected bunk has already been reserved by another student.'
+                    );
+                }
+            } else {
+                // A non-bunk room can have multiple students up to its capacity.
+                $reservedRoomStmt = $pdo->prepare("
+                    SELECT COUNT(*)
+                    FROM applications
+                    WHERE preferred_room_id=?
+                      AND preferred_bunk IS NULL
+                      AND status IN ('Pending','Approved')
+                      AND app_id<>?
+                ");
+                $reservedRoomStmt->execute([
+                    $room_id,
+                    $app_id
+                ]);
+
+                $reservedRoomSpaces = (int)$reservedRoomStmt->fetchColumn();
+
+                if ($actualOccupied + $reservedRoomSpaces > (int)$room['capacity']) {
+                    throw new RuntimeException(
+                        'The selected room no longer has enough available space.'
+                    );
+                }
+            }
+
+            // Create the final allocation using the student's selected room/bunk.
+            $pdo->prepare("
+                INSERT INTO allocations
+                    (student_id, room_id, bunk_number)
+                VALUES (?,?,?)
+            ")->execute([
+                $student_id,
+                $room_id,
+                $bunk_number
+            ]);
+
+            $newOccupied = $actualOccupied + 1;
+            $newStatus = $newOccupied >= (int)$room['capacity']
+                ? 'Full'
+                : 'Available';
+
+            $pdo->prepare("
+                UPDATE rooms
+                SET occupied=?,
+                    status=?
+                WHERE room_id=?
+                  AND hostel_id=?
+            ")->execute([
+                $newOccupied,
+                $newStatus,
+                $room_id,
+                $admin_hostel_id
+            ]);
+
+            $pdo->prepare("
+                UPDATE applications
+                SET status='Allocated'
+                WHERE app_id=?
+                  AND hostel_id=?
+                  AND status='Approved'
+            ")->execute([
+                $app_id,
+                $admin_hostel_id
+            ]);
+
+            $pdo->commit();
+
+            $msg = 'Student allocation confirmed successfully.';
         } catch (Throwable $e) {
             if ($pdo->inTransaction()) {
                 $pdo->rollBack();
@@ -178,11 +240,10 @@ if (isset($_POST['allocate'])) {
 
             $err = $e instanceof RuntimeException
                 ? $e->getMessage()
-                : 'The room assignment could not be completed. Please try again.';
+                : 'The student allocation could not be completed. Please try again.';
         }
     }
 }
-
 // Vacate only allocations belonging to this hostel.
 if (isset($_GET['vacate'])) {
     $alloc_id = (int)$_GET['vacate'];
@@ -245,21 +306,40 @@ $allocStmt = $pdo->prepare("SELECT a.*, s.full_name, s.form_no, s.department, s.
 $allocStmt->execute([$admin_hostel_id]);
 $allocs = $allocStmt->fetchAll();
 
-// Approved students who have not yet been assigned a room.
-$unallocStmt = $pdo->prepare("SELECT s.*, ap.preferred_room_id, ap.preferred_bunk
+// Approved students who have selected their room/bunk but do not yet have an active allocation.
+$unallocStmt = $pdo->prepare("
+    SELECT
+        s.student_id,
+        s.full_name,
+        s.form_no,
+        s.department,
+        s.level,
+        ap.app_id,
+        ap.preferred_room_id,
+        ap.preferred_bunk,
+        ap.applied_at,
+        r.room_number,
+        h.hostel_name,
+        h.hostel_type,
+        h.uses_bunks
     FROM students s
-    JOIN applications ap ON s.student_id=ap.student_id
+    JOIN applications ap
+        ON s.student_id=ap.student_id
+    JOIN rooms r
+        ON r.room_id=ap.preferred_room_id
+    JOIN hostels h
+        ON h.hostel_id=ap.hostel_id
     LEFT JOIN allocations al
         ON s.student_id=al.student_id
         AND al.status='Active'
     WHERE ap.hostel_id=?
       AND ap.status='Approved'
-      AND ap.preferred_room_id IS NULL
+      AND ap.preferred_room_id IS NOT NULL
       AND al.allocation_id IS NULL
-    ORDER BY ap.applied_at ASC");
+    ORDER BY ap.applied_at ASC
+");
 $unallocStmt->execute([$admin_hostel_id]);
 $unalloc = $unallocStmt->fetchAll();
-
 // Available rooms for this hostel.
 $roomsStmt = $pdo->prepare("SELECT r.*, h.hostel_name, h.hostel_type, h.uses_bunks
     FROM rooms r
@@ -335,110 +415,117 @@ $avail_rooms = $roomsStmt->fetchAll();
     <?php endif; ?>
 
     <?php if ($unalloc): ?>
+<div class="card">
+    <h2>Confirm Student Allocation</h2>
+    <p class="muted">
+        Review the room and bunk selected by each approved student, then confirm the allocation.
+    </p>
 
-    <div class="form-card" style="max-width:100%;margin-bottom:24px;">
+    <form method="post">
+        <div class="form-group">
+            <label for="student_id">Approved Student</label>
+            <select name="student_id" id="student_id" required>
+                <option value="">Select an approved student</option>
 
-        <h3>Assign Room</h3>
-
-        <form method="POST">
-
-            <div class="form-row">
-
-                <div class="form-group">
-
-                    <label for="allocation-student">
-                        Select Approved Student
-                    </label>
-
-                    <select
-                        name="student_id"
-                        id="allocation-student"
-                        required
+                <?php foreach ($unalloc as $student): ?>
+                    <option
+                        value="<?= (int)$student['student_id'] ?>"
+                        data-app-id="<?= (int)$student['app_id'] ?>"
                     >
+                        <?= htmlspecialchars($student['full_name']) ?>
+                        —
+                        <?= htmlspecialchars($student['form_no'] ?: 'No Form No.') ?>
+                        — Room <?= htmlspecialchars($student['room_number']) ?>
+                        <?php if ((int)$student['uses_bunks'] === 1 && !empty($student['preferred_bunk'])): ?>
+                            — Bunk <?= htmlspecialchars($student['preferred_bunk']) ?>
+                        <?php endif; ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
 
-                        <option value="">
-                            -- Select Student --
-                        </option>
+        <div
+            id="selected-allocation-details"
+            style="display:none;margin:16px 0;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;"
+        >
+            <strong style="display:block;margin-bottom:10px;">
+                Selected Accommodation
+            </strong>
 
-                        <?php foreach ($unalloc as $s): ?>
+            <div id="selected-room"></div>
+            <div id="selected-bunk" style="margin-top:6px;"></div>
+        </div>
 
-                        <option
-                            value="<?= (int)$s['student_id'] ?>"
-                            <?= $preselect_student === (int)$s['student_id'] ? 'selected' : '' ?>
-                        >
-                            <?= htmlspecialchars($s['full_name']) ?>
-                            (<?= htmlspecialchars($s['form_no']) ?>)
-                        </option>
+        <input type="hidden" name="app_id" id="app_id" value="">
 
-                        <?php endforeach; ?>
+        <button type="submit" name="confirm_allocation" class="btn btn-success">
+            Confirm Allocation
+        </button>
+    </form>
+</div>
 
-                    </select>
+<script>
+const approvedStudents = <?= json_encode(
+    array_map(
+        static function ($student) {
+            return [
+                'student_id' => (int)$student['student_id'],
+                'app_id' => (int)$student['app_id'],
+                'room_number' => $student['room_number'],
+                'preferred_bunk' => $student['preferred_bunk'],
+                'uses_bunks' => (int)$student['uses_bunks'],
+            ];
+        },
+        $unalloc
+    ),
+    JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT
+) ?>;
 
-                </div>
+const studentSelect = document.getElementById('student_id');
+const appIdInput = document.getElementById('app_id');
+const details = document.getElementById('selected-allocation-details');
+const selectedRoom = document.getElementById('selected-room');
+const selectedBunk = document.getElementById('selected-bunk');
 
-                <div class="form-group">
+studentSelect.addEventListener('change', function () {
+    const studentId = parseInt(this.value, 10);
 
-                    <label for="allocation-room">
-                        Select Available Room
-                    </label>
+    const student = approvedStudents.find(function (item) {
+        return item.student_id === studentId;
+    });
 
-                    <select
-                        name="room_id"
-                        id="allocation-room"
-                        required
-                    >
+    if (!student) {
+        appIdInput.value = '';
+        details.style.display = 'none';
+        selectedRoom.textContent = '';
+        selectedBunk.textContent = '';
+        return;
+    }
 
-                        <option value="">
-                            -- Select Room --
-                        </option>
+    appIdInput.value = student.app_id;
 
-                        <?php foreach ($avail_rooms as $r): ?>
+    selectedRoom.textContent = 'Room: ' + student.room_number;
 
-                        <option value="<?= (int)$r['room_id'] ?>">
-                            Room <?= htmlspecialchars($r['room_number']) ?>
-                            (<?= (int)$r['occupied'] ?>/<?= (int)$r['capacity'] ?> occupied)
-                            — <?= (int)$r['uses_bunks'] === 1 ? 'Uses Bunks' : 'No Bunks' ?>
-                        </option>
+    if (student.uses_bunks === 1 && student.preferred_bunk) {
+        selectedBunk.textContent = 'Bunk: ' + student.preferred_bunk;
+        selectedBunk.style.display = 'block';
+    } else {
+        selectedBunk.textContent = '';
+        selectedBunk.style.display = 'none';
+    }
 
-                        <?php endforeach; ?>
-
-                    </select>
-
-                </div>
-
-            </div>
-
-            <div class="alert alert-info" style="margin-bottom:16px;">
-                <strong>After room assignment:</strong>
-                <?php if ((int)$hostel['uses_bunks'] === 1): ?>
-                    this hostel uses bunks, so the student will choose an available bunk from the assigned room.
-                <?php else: ?>
-                    this hostel does not use bunks, so the room assignment will complete the student's allocation.
-                <?php endif; ?>
-            </div>
-
-            <button
-                type="submit"
-                name="allocate"
-                class="btn btn-success"
-            >
-                Assign Room
-            </button>
-
-        </form>
-
-    </div>
-
-    <?php else: ?>
-
-    <div class="alert alert-info">
-        No approved students are awaiting room assignment in
-        <?= htmlspecialchars($hostel['hostel_name']) ?>.
-    </div>
-
-    <?php endif; ?>
-
-    <div class="card">
+    details.style.display = 'block';
+});
+</script>
+<?php else: ?>
+<div class="card">
+    <h2>Confirm Student Allocation</h2>
+    <p class="muted">
+        No approved students are awaiting allocation confirmation in this hostel.
+    </p>
+</div>
+<?php endif; ?>
+<div class="card">
 
         <div class="card-header">
             <h3>Allocations (<?= count($allocs) ?>)</h3>
@@ -549,3 +636,6 @@ $avail_rooms = $roomsStmt->fetchAll();
 
 </body>
 </html>
+
+
+

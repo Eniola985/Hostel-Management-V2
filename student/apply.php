@@ -25,9 +25,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$existing) {
         $err = 'Your student account could not be found. Please log in again.';
     } else {
         $hostel_id = (int)($_POST['hostel_id'] ?? 0);
+        $room_id = (int)($_POST['room_id'] ?? 0);
+        $bunk_number = trim((string)($_POST['bunk_number'] ?? ''));
         $rrr = preg_replace('/\s+/', '', trim($_POST['payment_ref'] ?? ''));
 
-        // The server re-checks hostel and gender regardless of what the browser sends.
+        // The server re-checks hostel, room and gender regardless of what the browser sends.
         $hostelStmt = $pdo->prepare("SELECT * FROM hostels WHERE hostel_id=? LIMIT 1");
         $hostelStmt->execute([$hostel_id]);
         $hostel = $hostelStmt->fetch();
@@ -36,10 +38,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$existing) {
             $err = 'Please select a valid hostel.';
         } elseif ($hostel['hostel_type'] !== $student['gender']) {
             $err = 'You can only apply to a hostel assigned to your gender.';
+        } elseif ($room_id <= 0) {
+            $err = 'Please select an available room.';
+        } elseif ((int)$hostel['uses_bunks'] === 1 && ($bunk_number === '' || !ctype_digit($bunk_number) || (int)$bunk_number < 1)) {
+            $err = 'Please select an available bunk.';
         } elseif ($rrr === '' || !preg_match('/^[0-9-]{8,30}$/', $rrr)) {
             $err = 'Enter the Remita Retrieval Reference (RRR) from your payment receipt.';
         } else {
-            // Verify the RRR immediately before creating the application.
+            if ((int)$hostel['uses_bunks'] !== 1) {
+                $bunk_number = null;
+            } else {
+                $bunk_number = (string)(int)$bunk_number;
+            }
+
             $verification = verify_remita_rrr($rrr, $hostelFee);
 
             if (!$verification['verified']) {
@@ -49,47 +60,194 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$existing) {
                     $pdo->beginTransaction();
 
                     // Re-check that the student has not submitted another application.
-                    $lock = $pdo->prepare("SELECT app_id FROM applications WHERE student_id=? LIMIT 1 FOR UPDATE");
+                    $lock = $pdo->prepare("
+                        SELECT app_id
+                        FROM applications
+                        WHERE student_id=?
+                        LIMIT 1
+                        FOR UPDATE
+                    ");
                     $lock->execute([$sid]);
+
                     if ($lock->fetch()) {
                         throw new RuntimeException('You already have an application.');
                     }
 
+                    // Lock the selected room and verify that it belongs to the selected hostel.
+                    $roomStmt = $pdo->prepare("
+                        SELECT
+                            r.*,
+                            h.hostel_type,
+                            h.uses_bunks
+                        FROM rooms r
+                        JOIN hostels h ON h.hostel_id=r.hostel_id
+                        WHERE r.room_id=?
+                          AND r.hostel_id=?
+                        LIMIT 1
+                        FOR UPDATE
+                    ");
+                    $roomStmt->execute([$room_id, $hostel_id]);
+                    $room = $roomStmt->fetch();
+
+                    if (!$room) {
+                        throw new RuntimeException('The selected room is not available in this hostel.');
+                    }
+
+                    if ((int)$room['capacity'] < 1) {
+                        throw new RuntimeException('The selected room has an invalid capacity.');
+                    }
+
+                    // Count finalized active allocations in this room.
+                    $activeStmt = $pdo->prepare("
+                        SELECT COUNT(*)
+                        FROM allocations
+                        WHERE room_id=?
+                          AND status='Active'
+                    ");
+                    $activeStmt->execute([$room_id]);
+                    $activeOccupied = (int)$activeStmt->fetchColumn();
+
+                    if ((int)$room['uses_bunks'] === 1) {
+
+                        // Female hostel: every bunk is a selectable space.
+                        if ((int)$bunk_number > (int)$room['capacity']) {
+                            throw new RuntimeException('The selected bunk is not valid for this room.');
+                        }
+
+                        if ($activeOccupied >= (int)$room['capacity']) {
+                            throw new RuntimeException('The selected room is already full.');
+                        }
+
+                        // Check active allocation.
+                        $bunkCheck = $pdo->prepare("
+                            SELECT allocation_id
+                            FROM allocations
+                            WHERE room_id=?
+                              AND bunk_number=?
+                              AND status='Active'
+                            LIMIT 1
+                        ");
+                        $bunkCheck->execute([$room_id, $bunk_number]);
+
+                        if ($bunkCheck->fetch()) {
+                            throw new RuntimeException(
+                                'That bunk has already been taken. Please choose another available bunk.'
+                            );
+                        }
+
+                        // Check another student's pending/approved reservation.
+                        $reservedBunkCheck = $pdo->prepare("
+                            SELECT app_id
+                            FROM applications
+                            WHERE preferred_room_id=?
+                              AND preferred_bunk=?
+                              AND status IN ('Pending','Approved')
+                            LIMIT 1
+                        ");
+                        $reservedBunkCheck->execute([$room_id, $bunk_number]);
+
+                        if ($reservedBunkCheck->fetch()) {
+                            throw new RuntimeException(
+                                'That bunk has already been selected by another student. Please choose another available bunk.'
+                            );
+                        }
+
+                    } else {
+
+                        // Male hostel: no bunks. Reserve a room space.
+                        $reservedRoomStmt = $pdo->prepare("
+                            SELECT COUNT(*)
+                            FROM applications
+                            WHERE preferred_room_id=?
+                              AND status IN ('Pending','Approved')
+                        ");
+                        $reservedRoomStmt->execute([$room_id]);
+                        $reservedRoomSpaces = (int)$reservedRoomStmt->fetchColumn();
+
+                        if (($activeOccupied + $reservedRoomSpaces) >= (int)$room['capacity']) {
+                            throw new RuntimeException(
+                                'The selected room no longer has an available space. Please choose another room.'
+                            );
+                        }
+
+                        $bunk_number = null;
+                    }
+
                     // Prevent the same Remita RRR from being used more than once.
-                    $duplicatePayment = $pdo->prepare("SELECT payment_id FROM payments WHERE payment_ref=? LIMIT 1 FOR UPDATE");
+                    $duplicatePayment = $pdo->prepare("
+                        SELECT payment_id
+                        FROM payments
+                        WHERE payment_ref=?
+                        LIMIT 1
+                        FOR UPDATE
+                    ");
                     $duplicatePayment->execute([$rrr]);
+
                     if ($duplicatePayment->fetch()) {
                         throw new RuntimeException('This RRR has already been used.');
                     }
 
                     // Record the verified payment.
-                    $pdo->prepare("INSERT INTO payments
-                        (student_id, amount, payment_ref, verified, verification_source, verified_at)
-                        VALUES (?,?,?,?,?,NOW())")
-                        ->execute([$sid, $hostelFee, $rrr, 'Yes', 'Remita']);
+                    $pdo->prepare("
+                        INSERT INTO payments
+                            (student_id, amount, payment_ref, verified, verification_source, verified_at)
+                        VALUES (?,?,?,?,?,NOW())
+                    ")->execute([
+                        $sid,
+                        $hostelFee,
+                        $rrr,
+                        'Yes',
+                        'Remita'
+                    ]);
 
-                    // The student only applies for a hostel at this stage.
-                    // Room and bunk assignment happen after admin approval.
-                    $pdo->prepare("INSERT INTO applications
-                        (student_id, hostel_id, preferred_room_id, preferred_bunk, payment_ref, status, applied_at)
-                        VALUES (?,?,NULL,NULL,?,'Pending',NOW())")
-                        ->execute([$sid, $hostel_id, $rrr]);
+                    // Store the student's selected room and, where applicable, bunk.
+                    $pdo->prepare("
+                        INSERT INTO applications
+                            (student_id, hostel_id, preferred_room_id, preferred_bunk, payment_ref, status, applied_at)
+                        VALUES (?,?,?,?,?,'Pending',NOW())
+                    ")->execute([
+                        $sid,
+                        $hostel_id,
+                        $room_id,
+                        $bunk_number,
+                        $rrr
+                    ]);
 
                     $applicationId = (int)$pdo->lastInsertId();
 
-                    $message = $student['full_name'] . ' submitted a new hostel application.';
-                    $pdo->prepare("INSERT INTO admin_notifications
-                        (hostel_id, application_id, type, message)
-                        VALUES (?,?,?,?)")
-                        ->execute([$hostel_id, $applicationId, 'new_application', $message]);
+                    $selection = 'Room ' . $room['room_number'];
+
+                    if ($bunk_number !== null) {
+                        $selection .= ', Bunk ' . $bunk_number;
+                    }
+
+                    $message = $student['full_name']
+                        . ' submitted a new hostel application for '
+                        . $selection
+                        . '.';
+
+                    $pdo->prepare("
+                        INSERT INTO admin_notifications
+                            (hostel_id, application_id, type, message)
+                        VALUES (?,?,?,?)
+                    ")->execute([
+                        $hostel_id,
+                        $applicationId,
+                        'new_application',
+                        $message
+                    ]);
 
                     $pdo->commit();
 
-                    $msg = 'Payment verified and your hostel application was submitted successfully. Your application time has been recorded for first-come, first-served processing.';
+                    $msg = 'Payment verified and your hostel application was submitted successfully with your selected room'
+                        . ($bunk_number !== null ? ' and bunk' : '')
+                        . '. Your application time has been recorded for first-come, first-served processing.';
 
                     $existingStmt->execute([$sid]);
                     $existing = $existingStmt->fetch();
+
                 } catch (Throwable $e) {
+
                     if ($pdo->inTransaction()) {
                         $pdo->rollBack();
                     }
@@ -102,7 +260,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$existing) {
         }
     }
 }
-
 $hostels = [];
 
 if ($student) {
@@ -125,16 +282,50 @@ $availableRoomsByHostel = [];
 if ($student) {
     $roomsStmt = $pdo->prepare("
         SELECT
-            room_id,
-            hostel_id,
-            room_number,
-            capacity,
-            occupied,
-            status
-        FROM rooms
-        WHERE status='Available'
-          AND occupied < capacity
-        ORDER BY room_number
+            r.room_id,
+            r.hostel_id,
+            r.room_number,
+            r.capacity,
+            r.occupied,
+            r.status,
+            h.uses_bunks,
+            (
+                SELECT COUNT(*)
+                FROM allocations a
+                WHERE a.room_id = r.room_id
+                  AND a.status = 'Active'
+            ) AS active_allocations,
+            (
+                SELECT GROUP_CONCAT(
+                    DISTINCT a.bunk_number
+                    ORDER BY CAST(a.bunk_number AS UNSIGNED)
+                )
+                FROM allocations a
+                WHERE a.room_id = r.room_id
+                  AND a.status = 'Active'
+                  AND a.bunk_number IS NOT NULL
+            ) AS active_bunks,
+            (
+                SELECT GROUP_CONCAT(
+                    DISTINCT ap.preferred_bunk
+                    ORDER BY CAST(ap.preferred_bunk AS UNSIGNED)
+                )
+                FROM applications ap
+                WHERE ap.preferred_room_id = r.room_id
+                  AND ap.preferred_bunk IS NOT NULL
+                  AND ap.status IN ('Pending','Approved')
+            ) AS reserved_bunks,
+            (
+                SELECT COUNT(*)
+                FROM applications ap
+                WHERE ap.preferred_room_id = r.room_id
+                  AND ap.preferred_bunk IS NULL
+                  AND ap.status IN ('Pending','Approved')
+            ) AS reserved_room_spaces
+        FROM rooms r
+        JOIN hostels h ON h.hostel_id = r.hostel_id
+        WHERE r.status = 'Available'
+        ORDER BY r.hostel_id, r.room_number
     ");
 
     $roomsStmt->execute();
@@ -231,9 +422,7 @@ if ($student) {
 
         <div class="alert alert-info">
             <strong>Application process:</strong>
-            Select your preferred hostel and enter your Remita RRR.
-            Room assignment will be handled by the hostel administrator after your application is approved.
-            If your assigned hostel uses bunks, you will choose your bunk after a room has been assigned to you.
+            Select your preferred hostel, room, and Remita RRR. For female hostels, you will also select an available bunk in your chosen room. Your selected room and bunk (where applicable) will be submitted with your application for administrator approval.
         </div>
 
         <div class="form-card" style="max-width:100%;">
@@ -309,12 +498,28 @@ if ($student) {
     style="display:none;margin-top:14px;padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;"
 >
     <strong style="display:block;margin-bottom:10px;">
-        Available Rooms
+        Select Your Room
     </strong>
 
     <div id="available-rooms-list"></div>
-</div>                  
-  <label for="payment_ref">
+</div>
+
+<input type="hidden" name="room_id" id="room_id" value="">
+
+<div
+    id="available-bunks-container"
+    style="display:none;margin-top:14px;padding:16px;background:#f8fafc;border-radius:8px;border:1px solid #e2e8f0;"
+>
+    <strong style="display:block;margin-bottom:10px;">
+        Select Your Bunk
+    </strong>
+
+    <div id="available-bunks-list"></div>
+</div>
+
+<input type="hidden" name="bunk_number" id="bunk_number" value="">
+
+<label for="payment_ref">
                         Remita Retrieval Reference (RRR)
                     </label>
 
@@ -367,11 +572,121 @@ const availableRoomsByHostel = <?= json_encode(
 const hostelSelect = document.getElementById('hostel_id');
 const roomsContainer = document.getElementById('available-rooms-container');
 const roomsList = document.getElementById('available-rooms-list');
+const roomIdInput = document.getElementById('room_id');
+const bunkNumberInput = document.getElementById('bunk_number');
+const bunksContainer = document.getElementById('available-bunks-container');
+const bunksList = document.getElementById('available-bunks-list');
+
+function resetRoomAndBunkSelection() {
+    roomIdInput.value = '';
+    bunkNumberInput.value = '';
+    bunksList.innerHTML = '';
+    bunksContainer.style.display = 'none';
+}
+
+function selectRoom(room) {
+    roomIdInput.value = room.room_id;
+    bunkNumberInput.value = '';
+
+    document.querySelectorAll('.room-choice').forEach(card => {
+        card.style.borderColor = '#e2e8f0';
+        card.style.background = 'white';
+    });
+
+    const selectedCard = document.querySelector(
+        `.room-choice[data-room-id="${room.room_id}"]`
+    );
+
+    if (selectedCard) {
+        selectedCard.style.borderColor = '#2563eb';
+        selectedCard.style.background = '#eff6ff';
+    }
+
+    if (parseInt(room.uses_bunks, 10) === 1) {
+        showAvailableBunks(room);
+    } else {
+        bunksList.innerHTML = '';
+        bunksContainer.style.display = 'none';
+    }
+}
+
+function showAvailableBunks(room) {
+    bunksList.innerHTML = '';
+    bunkNumberInput.value = '';
+    bunksContainer.style.display = 'block';
+
+    const capacity = parseInt(room.capacity, 10);
+
+    const activeBunks = room.active_bunks
+        ? String(room.active_bunks).split(',').map(value => value.trim())
+        : [];
+
+    const reservedBunks = room.reserved_bunks
+        ? String(room.reserved_bunks).split(',').map(value => value.trim())
+        : [];
+
+    const unavailableBunks = new Set([
+        ...activeBunks,
+        ...reservedBunks
+    ]);
+
+    const availableBunks = [];
+
+    for (let number = 1; number <= capacity; number++) {
+        if (!unavailableBunks.has(String(number))) {
+            availableBunks.push(String(number));
+        }
+    }
+
+    if (availableBunks.length === 0) {
+        bunksList.innerHTML = `
+            <div class="alert alert-warning" style="margin:0;">
+                There are currently no available bunks in this room.
+            </div>
+        `;
+        return;
+    }
+
+    availableBunks.forEach(bunk => {
+        const bunkButton = document.createElement('button');
+
+        bunkButton.type = 'button';
+        bunkButton.className = 'bunk-choice';
+        bunkButton.dataset.bunkNumber = bunk;
+
+        bunkButton.style.cssText = `
+            padding:10px 16px;
+            margin:0 8px 8px 0;
+            background:white;
+            border:1px solid #cbd5e1;
+            border-radius:6px;
+            cursor:pointer;
+            font-weight:600;
+        `;
+
+        bunkButton.textContent = `Bunk ${bunk}`;
+
+        bunkButton.addEventListener('click', function () {
+            bunkNumberInput.value = bunk;
+
+            document.querySelectorAll('.bunk-choice').forEach(button => {
+                button.style.borderColor = '#cbd5e1';
+                button.style.background = 'white';
+            });
+
+            this.style.borderColor = '#2563eb';
+            this.style.background = '#eff6ff';
+        });
+
+        bunksList.appendChild(bunkButton);
+    });
+}
 
 function showAvailableRooms() {
     const hostelId = hostelSelect.value;
 
     roomsList.innerHTML = '';
+    resetRoomAndBunkSelection();
 
     if (!hostelId) {
         roomsContainer.style.display = 'none';
@@ -382,7 +697,31 @@ function showAvailableRooms() {
 
     roomsContainer.style.display = 'block';
 
-    if (rooms.length === 0) {
+    const selectableRooms = rooms.filter(room => {
+        const capacity = parseInt(room.capacity, 10);
+        const activeAllocations = parseInt(room.active_allocations || 0, 10);
+        const reservedRoomSpaces = parseInt(room.reserved_room_spaces || 0, 10);
+        const usesBunks = parseInt(room.uses_bunks, 10) === 1;
+
+        if (usesBunks) {
+            const activeBunks = room.active_bunks
+                ? String(room.active_bunks).split(',').map(value => value.trim())
+                : [];
+
+            const reservedBunks = room.reserved_bunks
+                ? String(room.reserved_bunks).split(',').map(value => value.trim())
+                : [];
+
+            return (capacity - new Set([
+                ...activeBunks,
+                ...reservedBunks
+            ]).size) > 0;
+        }
+
+        return (capacity - activeAllocations - reservedRoomSpaces) > 0;
+    });
+
+    if (selectableRooms.length === 0) {
         roomsList.innerHTML = `
             <div class="alert alert-warning" style="margin:0;">
                 There are currently no rooms with available space in this hostel.
@@ -391,30 +730,77 @@ function showAvailableRooms() {
         return;
     }
 
-    rooms.forEach(room => {
+    selectableRooms.forEach(room => {
         const capacity = parseInt(room.capacity, 10);
-        const occupied = parseInt(room.occupied, 10);
-        const available = Math.max(0, capacity - occupied);
+        const activeAllocations = parseInt(room.active_allocations || 0, 10);
+        const reservedRoomSpaces = parseInt(room.reserved_room_spaces || 0, 10);
+        const usesBunks = parseInt(room.uses_bunks, 10) === 1;
 
-        const roomDiv = document.createElement('div');
+        let availableText = '';
+        let availableCount = 0;
 
-        roomDiv.style.cssText = `
-            padding:12px;
+        if (usesBunks) {
+            const activeBunks = room.active_bunks
+                ? String(room.active_bunks).split(',').map(value => value.trim())
+                : [];
+
+            const reservedBunks = room.reserved_bunks
+                ? String(room.reserved_bunks).split(',').map(value => value.trim())
+                : [];
+
+            availableCount = Math.max(
+                0,
+                capacity - new Set([
+                    ...activeBunks,
+                    ...reservedBunks
+                ]).size
+            );
+
+            availableText =
+                `${availableCount} bunk${availableCount === 1 ? '' : 's'} available`;
+        } else {
+            availableCount = Math.max(
+                0,
+                capacity - activeAllocations - reservedRoomSpaces
+            );
+
+            availableText =
+                `${availableCount} space${availableCount === 1 ? '' : 's'} available`;
+        }
+
+        const roomButton = document.createElement('button');
+
+        roomButton.type = 'button';
+        roomButton.className = 'room-choice';
+        roomButton.dataset.roomId = room.room_id;
+
+        roomButton.style.cssText = `
+            display:block;
+            width:100%;
+            padding:14px;
             margin-bottom:8px;
+            text-align:left;
             background:white;
             border:1px solid #e2e8f0;
             border-radius:6px;
+            cursor:pointer;
         `;
 
-        roomDiv.innerHTML = `
+        roomButton.innerHTML = `
             <strong>Room ${escapeHtml(room.room_number)}</strong>
             <span style="color:#64748b;">
-                — ${occupied}/${capacity} occupied
-                — <strong>${available} space${available === 1 ? '' : 's'} available</strong>
+                — ${escapeHtml(availableText)}
+            </span>
+            <span style="display:block;margin-top:4px;color:#2563eb;font-size:13px;">
+                Click to select this room
             </span>
         `;
 
-        roomsList.appendChild(roomDiv);
+        roomButton.addEventListener('click', function () {
+            selectRoom(room);
+        });
+
+        roomsList.appendChild(roomButton);
     });
 }
 
@@ -430,5 +816,11 @@ showAvailableRooms();
 </script>
 </body>
 </html>
+
+
+
+
+
+
 
 
