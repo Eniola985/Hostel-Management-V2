@@ -1,17 +1,20 @@
 <?php
 session_start();
 require_once '../includes/db.php';
+
 $err = '';
-$form_no = strtoupper(trim($_POST['form_no'] ?? ''));
+$email = strtolower(trim($_POST['email'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $pass = $_POST['password'] ?? '';
 
-    if (!preg_match('/^[FD][0-9]{7}$/', $form_no)) {
-        $err = 'Enter a valid form number in the format F2405297 or D2405297.';
+    if ($email === '') {
+        $err = 'Enter the email address you used to register.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $err = 'Enter a valid email address.';
     } else {
-        $stmt = $pdo->prepare("SELECT * FROM students WHERE form_no=? LIMIT 1");
-        $stmt->execute([$form_no]);
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE email=? LIMIT 1");
+        $stmt->execute([$email]);
         $student = $stmt->fetch();
 
         if ($student && password_verify($pass, $student['password'])) {
@@ -23,7 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             exit;
         }
 
-        $err = 'Invalid form number or password.';
+        $err = 'Invalid email address or password.';
     }
 }
 ?>
@@ -46,8 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($err): ?><div class="alert alert-error"><?= htmlspecialchars($err) ?></div><?php endif; ?>
         <form method="POST">
             <div class="form-group">
-                <label>Form Number</label>
-                <input type="text" name="form_no" placeholder="e.g. F2405297" pattern="[FDfd][0-9]{7}" maxlength="8" minlength="8" style="text-transform:uppercase" value="<?= htmlspecialchars($form_no) ?>" required autofocus>
+                <label>Email Address</label>
+                <input type="email" name="email" placeholder="your@email.com" value="<?= htmlspecialchars($email) ?>" required autofocus>
             </div>
             <div class="form-group">
                 <label>Password</label>
@@ -65,3 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 </body>
 </html>
+
+
+
+
+

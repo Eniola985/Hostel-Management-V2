@@ -34,7 +34,7 @@ $payment = $payment->fetch();
     <div class="user-info">
         <div class="avatar"><?php if (!empty($student['profile_photo'])): ?><img src="../<?= htmlspecialchars($student['profile_photo']) ?>" alt="Student photograph" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"><?php else: ?><?= strtoupper(substr($student['full_name'],0,1)) ?><?php endif; ?></div>
         <div class="name"><?= htmlspecialchars(explode(' ',$student['full_name'])[0]) ?></div>
-        <div class="role"><?= htmlspecialchars($student['form_no']) ?></div>
+        <div class="role"><?= htmlspecialchars($student['email']) ?></div>
         <div class="hostel-badge">
             <?php if ($allocation): ?>
                 🏨 <?= htmlspecialchars($allocation['hostel_name']) ?>
