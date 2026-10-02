@@ -1,2 +1,4 @@
 .env.local
 .env.*.local
+uploads/student_photos/*
+hostel_management_backup.sql

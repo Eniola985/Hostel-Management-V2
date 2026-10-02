@@ -32,9 +32,9 @@ $payment = $payment->fetch();
 <div class="wrapper">
 <aside class="sidebar">
     <div class="user-info">
-        <div class="avatar"><?= strtoupper(substr($student['full_name'],0,1)) ?></div>
+        <div class="avatar"><?php if (!empty($student['profile_photo'])): ?><img src="../<?= htmlspecialchars($student['profile_photo']) ?>" alt="Student photograph" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"><?php else: ?><?= strtoupper(substr($student['full_name'],0,1)) ?><?php endif; ?></div>
         <div class="name"><?= htmlspecialchars(explode(' ',$student['full_name'])[0]) ?></div>
-        <div class="role"><?= htmlspecialchars($student['matric_no']) ?></div>
+        <div class="role"><?= htmlspecialchars($student['email']) ?></div>
         <div class="hostel-badge">
             <?php if ($allocation): ?>
                 🏨 <?= htmlspecialchars($allocation['hostel_name']) ?>
@@ -136,7 +136,7 @@ $payment = $payment->fetch();
         <div class="card-body">
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;">
                 <div><strong>Full Name:</strong><br><?= htmlspecialchars($student['full_name']) ?></div>
-                <div><strong>Matric Number:</strong><br><?= htmlspecialchars($student['matric_no']) ?></div>
+               <div><strong>Form Number:</strong><br><?= htmlspecialchars($student['form_no']) ?></div>
                 <div><strong>Department:</strong><br><?= htmlspecialchars($student['department']) ?></div>
                 <div><strong>Level:</strong><br><?= htmlspecialchars($student['level']) ?></div>
                 <div><strong>Gender:</strong><br><?= htmlspecialchars($student['gender']) ?></div>
@@ -151,3 +151,4 @@ $payment = $payment->fetch();
 <div class="footer">&copy; <?= date('Y') ?> The Polytechnic, Ibadan Hostel Management System</div>
 </body>
 </html>
+

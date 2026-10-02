@@ -1,21 +1,27 @@
 <?php
-session_start();
-if (!isset($_SESSION['admin_id'])) { header('Location: login.php'); exit; }
-require_once '../includes/db.php';
+require_once '../includes/admin_auth.php';
+$hostel = current_admin_hostel($pdo);
 
-$students = $pdo->query("SELECT COUNT(*) FROM students")->fetchColumn();
-$hostels = $pdo->query("SELECT COUNT(*) FROM hostels")->fetchColumn();
-$rooms = $pdo->query("SELECT COUNT(*) FROM rooms")->fetchColumn();
-$available = $pdo->query("SELECT COUNT(*) FROM rooms WHERE status='Available'")->fetchColumn();
-$allocations = $pdo->query("SELECT COUNT(*) FROM allocations WHERE status='Active'")->fetchColumn();
-$pending = $pdo->query("SELECT COUNT(*) FROM applications WHERE status='Pending'")->fetchColumn();
+$students = $pdo->prepare("SELECT COUNT(DISTINCT student_id) FROM applications WHERE hostel_id=?");
+$students->execute([$admin_hostel_id]);
+$students = $students->fetchColumn();
+$hostels = 1;
+$rooms = $pdo->prepare("SELECT COUNT(*) FROM rooms WHERE hostel_id=?");
+$rooms->execute([$admin_hostel_id]);
+$rooms = $rooms->fetchColumn();
+$available = $pdo->prepare("SELECT COUNT(*) FROM rooms WHERE hostel_id=? AND status='Available'");
+$available->execute([$admin_hostel_id]);
+$available = $available->fetchColumn();
+$allocations = $pdo->prepare("SELECT COUNT(*) FROM allocations a JOIN rooms r ON r.room_id=a.room_id WHERE r.hostel_id=? AND a.status='Active'");
+$allocations->execute([$admin_hostel_id]);
+$allocations = $allocations->fetchColumn();
+$pending = $pdo->prepare("SELECT COUNT(*) FROM applications WHERE hostel_id=? AND status='Pending'");
+$pending->execute([$admin_hostel_id]);
+$pending = $pending->fetchColumn();
 
-$recent = $pdo->query("SELECT a.*, s.full_name, s.matric_no, r.room_number, h.hostel_name 
-    FROM allocations a 
-    JOIN students s ON a.student_id = s.student_id 
-    JOIN rooms r ON a.room_id = r.room_id 
-    JOIN hostels h ON r.hostel_id = h.hostel_id 
-    ORDER BY a.allocation_date DESC LIMIT 5")->fetchAll();
+$recent = $pdo->prepare("SELECT a.*, s.full_name, s.form_no, r.room_number, h.hostel_name FROM allocations a JOIN students s ON a.student_id=s.student_id JOIN rooms r ON a.room_id=r.room_id JOIN hostels h ON r.hostel_id=h.hostel_id WHERE r.hostel_id=? ORDER BY a.allocation_date DESC LIMIT 5");
+$recent->execute([$admin_hostel_id]);
+$recent = $recent->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -27,19 +33,7 @@ $recent = $pdo->query("SELECT a.*, s.full_name, s.matric_no, r.room_number, h.ho
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-<nav class="navbar">
-    <div class="brand"><img src="../assets/POLYLOGO.jpg" alt="The Polytechnic, Ibadan logo"> Poly Ibadan HMS Admin</div>
-    <ul class="nav-links">
-        <li><a href="dashboard.php" class="active">Dashboard</a></li>
-        <li><a href="hostels.php">Hostels</a></li>
-        <li><a href="students.php">Students</a></li>
-        <li><a href="applications.php">Applications</a></li>
-        <li><a href="allocations.php">Allocations</a></li>
-        <li><a href="reports.php">Reports</a></li>
-        <li><a href="logout.php" class="logout">Logout</a></li>
-    </ul>
-</nav>
-<div class="wrapper">
+<div class="wrapper admin-layout">
     <aside class="sidebar">
         <div class="user-info">
             <div class="avatar">A</div>
@@ -61,8 +55,8 @@ $recent = $pdo->query("SELECT a.*, s.full_name, s.matric_no, r.room_number, h.ho
         </nav>
     </aside>
     <main class="main">
-        <div class="page-title">Welcome, <?= htmlspecialchars($_SESSION['admin_name']) ?> 👋</div>
-        <div class="page-subtitle">Here is a summary of hostel accommodation activities</div>
+        <div class="page-title">Welcome, <?= htmlspecialchars($hostel['hostel_name']) ?> Admin 👋</div>
+        <div class="page-subtitle">Here is a summary of <?= htmlspecialchars($hostel['hostel_name']) ?> accommodation activities</div>
 
         <div class="stats-grid">
             <div class="stat-card">
@@ -119,12 +113,13 @@ $recent = $pdo->query("SELECT a.*, s.full_name, s.matric_no, r.room_number, h.ho
                     <div class="empty-state"><span class="empty-icon">📭</span><p>No allocations yet.</p></div>
                 <?php else: ?>
                 <table>
-                    <thead><tr><th>Student</th><th>Matric No</th><th>Hostel</th><th>Room</th><th>Date</th><th>Status</th></tr></thead>
+                    <thead><tr><th>Student</th><th>Form No
+</th><th>Hostel</th><th>Room</th><th>Date</th><th>Status</th></tr></thead>
                     <tbody>
                     <?php foreach ($recent as $r): ?>
                         <tr>
                             <td><?= htmlspecialchars($r['full_name']) ?></td>
-                            <td><?= htmlspecialchars($r['matric_no']) ?></td>
+                            <td><?= htmlspecialchars($r['form_no']) ?></td>
                             <td><?= htmlspecialchars($r['hostel_name']) ?></td>
                             <td>Room <?= htmlspecialchars($r['room_number']) ?></td>
                             <td><?= date('d M Y', strtotime($r['allocation_date'])) ?></td>

@@ -769,3 +769,8 @@ tbody tr:hover td { background: #fafafa; }
     .stats-grid { grid-template-columns: 1fr 1fr; }
     .main { padding: 16px; }
 }
+
+/* Admin layout: sidebar-only navigation */
+.wrapper.admin-layout {
+    min-height: 100vh;
+}

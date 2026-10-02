@@ -1,26 +1,32 @@
 <?php
 session_start();
 require_once '../includes/db.php';
+
 $err = '';
+$email = strtolower(trim($_POST['email'] ?? ''));
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $matric = trim($_POST['matric_no']);
-    $pass = trim($_POST['password']);
-    if (!preg_match('/^\d{13}$/', $matric)) {
-        $err = 'Matriculation number must be exactly 13 digits.';
+    $pass = $_POST['password'] ?? '';
+
+    if ($email === '') {
+        $err = 'Enter the email address you used to register.';
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $err = 'Enter a valid email address.';
     } else {
-        $stmt = $pdo->prepare("SELECT * FROM students WHERE matric_no=?");
-        $stmt->execute([$matric]);
+        $stmt = $pdo->prepare("SELECT * FROM students WHERE email=? LIMIT 1");
+        $stmt->execute([$email]);
         $student = $stmt->fetch();
-        if ($student && $pass === $student['password']) {
+
+        if ($student && password_verify($pass, $student['password'])) {
+            session_regenerate_id(true);
             $_SESSION['student_id'] = $student['student_id'];
             $_SESSION['student_name'] = $student['full_name'];
-            $_SESSION['student_matric'] = $student['matric_no'];
+            $_SESSION['student_form_no'] = $student['form_no'];
             header('Location: dashboard.php');
             exit;
-        } else {
-            $err = 'Invalid matriculation number or password.';
         }
+
+        $err = 'Invalid email address or password.';
     }
 }
 ?>
@@ -43,8 +49,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <?php if ($err): ?><div class="alert alert-error"><?= htmlspecialchars($err) ?></div><?php endif; ?>
         <form method="POST">
             <div class="form-group">
-                <label>Matriculation Number (13 digits)</label>
-                <input type="text" name="matric_no" placeholder="e.g. 2024705010106" pattern="\d{13}" maxlength="13" required>
+                <label>Email Address</label>
+                <input type="email" name="email" placeholder="your@email.com" value="<?= htmlspecialchars($email) ?>" required autofocus>
             </div>
             <div class="form-group">
                 <label>Password</label>
@@ -62,3 +68,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 </div>
 </body>
 </html>
+
+
+
+
+

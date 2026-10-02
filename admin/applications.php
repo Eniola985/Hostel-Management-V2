@@ -1,7 +1,6 @@
 <?php
-session_start();
-if (!isset($_SESSION['admin_id'])) { header('Location: login.php'); exit; }
-require_once '../includes/db.php';
+require_once '../includes/admin_auth.php';
+$hostel = current_admin_hostel($pdo);
 
 $msg = '';
 $err = '';
@@ -18,12 +17,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             if ($action === 'approve') {
-                $statement = $pdo->prepare("UPDATE applications SET status='Approved', rejection_reason=NULL WHERE app_id=? AND status='Pending'");
-                $statement->execute([$app_id]);
+                $statement = $pdo->prepare("UPDATE applications SET status='Approved', rejection_reason=NULL WHERE app_id=? AND hostel_id=? AND status='Pending'");
+                $statement->execute([$app_id, $admin_hostel_id]);
                 $msg = $statement->rowCount() ? 'Application approved successfully.' : 'This application is no longer pending.';
             } else {
-                $statement = $pdo->prepare("UPDATE applications SET status='Rejected', rejection_reason=? WHERE app_id=? AND status='Pending'");
-                $statement->execute([$rejection_reason, $app_id]);
+                $statement = $pdo->prepare("UPDATE applications SET status='Rejected', rejection_reason=? WHERE app_id=? AND hostel_id=? AND status='Pending'");
+                $statement->execute([$rejection_reason, $app_id, $admin_hostel_id]);
                 $msg = $statement->rowCount() ? 'Application rejected and the reason was saved.' : 'This application is no longer pending.';
             }
         } catch (PDOException $e) {
@@ -32,11 +31,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-$apps = $pdo->query("SELECT a.*, s.full_name, s.matric_no, s.department, s.level, s.gender, h.hostel_name, h.hostel_type 
+$apps = $pdo->prepare("SELECT a.*, s.full_name, s.form_no, s.department, s.level, s.gender, h.hostel_name, h.hostel_type 
     FROM applications a 
     JOIN students s ON a.student_id = s.student_id 
     JOIN hostels h ON a.hostel_id = h.hostel_id 
-    ORDER BY a.applied_at DESC")->fetchAll();
+    WHERE a.hostel_id = ?
+    ORDER BY a.applied_at DESC");
+$apps->execute([$admin_hostel_id]);
+$apps = $apps->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -47,19 +49,8 @@ $apps = $pdo->query("SELECT a.*, s.full_name, s.matric_no, s.department, s.level
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
-<nav class="navbar">
-    <div class="brand"><img src="../assets/POLYLOGO.jpg" alt="The Polytechnic, Ibadan logo"> Poly Ibadan HMS Admin</div>
-    <ul class="nav-links">
-        <li><a href="dashboard.php">Dashboard</a></li>
-        <li><a href="hostels.php">Hostels</a></li>
-        <li><a href="students.php">Students</a></li>
-        <li><a href="applications.php" class="active">Applications</a></li>
-        <li><a href="allocations.php">Allocations</a></li>
-        <li><a href="reports.php">Reports</a></li>
-        <li><a href="logout.php" class="logout">Logout</a></li>
-    </ul>
-</nav>
-<div class="wrapper">
+
+<div class="wrapper admin-layout">
 <aside class="sidebar">
     <div class="user-info">
         <div class="avatar">A</div>
@@ -78,7 +69,7 @@ $apps = $pdo->query("SELECT a.*, s.full_name, s.matric_no, s.department, s.level
     </nav>
 </aside>
 <main class="main">
-    <div class="page-title">Hostel Applications</div>
+    <div class="page-title"><?= htmlspecialchars($hostel['hostel_name']) ?> Applications</div>
     <div class="page-subtitle">Review and process student accommodation applications</div>
     <?php if ($msg): ?><div class="alert alert-success"><?= htmlspecialchars($msg) ?></div><?php endif; ?>
     <?php if ($err): ?><div class="alert alert-error"><?= htmlspecialchars($err) ?></div><?php endif; ?>
@@ -90,13 +81,14 @@ $apps = $pdo->query("SELECT a.*, s.full_name, s.matric_no, s.department, s.level
                 <div class="empty-state"><span class="empty-icon">📋</span><p>No applications submitted yet.</p></div>
             <?php else: ?>
             <table>
-                <thead><tr><th>#</th><th>Student</th><th>Matric No</th><th>Dept / Level</th><th>Gender</th><th>Hostel Applied</th><th>Payment Ref</th><th>Date Applied</th><th>Status</th><th>Actions</th></tr></thead>
+                <thead><tr><th>#</th><th>Student</th><th>Form No
+</th><th>Dept / Level</th><th>Gender</th><th>Hostel Applied</th><th>Payment Ref</th><th>Date Applied</th><th>Status</th><th>Actions</th></tr></thead>
                 <tbody>
                 <?php foreach ($apps as $i => $a): ?>
                 <tr>
                     <td><?= $i+1 ?></td>
                     <td><strong><?= htmlspecialchars($a['full_name']) ?></strong></td>
-                    <td><?= htmlspecialchars($a['matric_no']) ?></td>
+                    <td><?= htmlspecialchars($a['form_no']) ?></td>
                     <td><?= htmlspecialchars($a['department']) ?> / <?= htmlspecialchars($a['level']) ?></td>
                     <td><span class="badge <?= $a['gender']==='Male'?'badge-info':'badge-warning' ?>"><?= $a['gender'] ?></span></td>
                     <td><?= htmlspecialchars($a['hostel_name']) ?> <small>(<?= $a['hostel_type'] ?>)</small></td>

@@ -15,16 +15,26 @@
         <h1>Hostel accommodation, made simpler.</h1>
         <p class="subtitle">Apply, manage, and track campus accommodation in one place.</p>
         <div class="hero-cards">
+            <a href="general-admin/login.php" class="hero-card">
+                <span class="card-icon">&#9881;</span>
+                <span>
+                    <h3>General Admin Portal</h3>
+                    <p>Manage the entire hostel management system</p>
+                </span>
+                <span class="card-arrow">&rarr;</span>
+            </a>
+
             <a href="admin/login.php" class="hero-card">
-                <span class="card-icon">🔐</span>
+                <span class="card-icon">&#128272;</span>
                 <span>
                     <h3>Admin Portal</h3>
                     <p>Manage hostels, rooms, students and allocations</p>
                 </span>
                 <span class="card-arrow">&rarr;</span>
             </a>
+
             <a href="student/login.php" class="hero-card">
-                <span class="card-icon">🎓</span>
+                <span class="card-icon">&#127891;</span>
                 <span>
                     <h3>Student Portal</h3>
                     <p>Apply for accommodation and check your status</p>
