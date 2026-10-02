@@ -382,6 +382,257 @@ $csrf = csrf_token();
     padding-bottom:16px;
 }
 
+@page {
+    size: A4 portrait;
+    margin: 10mm;
+}
+
+@media print {
+    html,
+    body {
+        width: 210mm;
+        min-height: 297mm;
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+        color: #111827 !important;
+        font-family: Arial, Helvetica, sans-serif !important;
+        font-size: 9pt !important;
+    }
+
+    .navbar,
+    .sidebar,
+    .no-print,
+    .footer {
+        display: none !important;
+    }
+
+    .wrapper {
+        display: block !important;
+        min-height: 0 !important;
+    }
+
+    .main {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        overflow: visible !important;
+    }
+
+    .print-header {
+        display: block !important;
+        text-align: center !important;
+        margin: 0 0 7px !important;
+        padding: 0 0 6px !important;
+        border-bottom: 1.5px solid #1e3a5f !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .print-header img {
+        width: 52px !important;
+        height: 52px !important;
+        margin: 0 0 2px !important;
+    }
+
+    .print-header h2 {
+        margin: 0 !important;
+        font-size: 14pt !important;
+        line-height: 1.1 !important;
+    }
+
+    .print-header p {
+        margin: 2px 0 !important;
+        font-size: 7.5pt !important;
+        line-height: 1.15 !important;
+    }
+
+    .print-header h3 {
+        margin: 4px 0 1px !important;
+        font-size: 10.5pt !important;
+        line-height: 1.15 !important;
+        letter-spacing: .3px !important;
+    }
+
+    .allocation-slip {
+        width: 100% !important;
+        max-width: none !important;
+        margin: 0 !important;
+        border: 1.5px solid #1e3a5f !important;
+        border-radius: 0 !important;
+        box-shadow: none !important;
+        overflow: hidden !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .allocation-slip .card-header {
+        min-height: 0 !important;
+        padding: 7px 10px !important;
+        background: #1e3a5f !important;
+        color: #fff !important;
+        border: 0 !important;
+    }
+
+    .allocation-slip .card-header h3 {
+        margin: 0 !important;
+        color: #fff !important;
+        font-size: 10pt !important;
+        line-height: 1.2 !important;
+    }
+
+    .allocation-slip .card-header .badge {
+        padding: 3px 7px !important;
+        font-size: 7pt !important;
+    }
+
+    .allocation-slip .card-body {
+        padding: 9px !important;
+    }
+
+    .allocation-summary {
+        display: block !important;
+        margin: 0 0 8px !important;
+        padding: 8px !important;
+        background: #f8fafc !important;
+        border-bottom: 1px solid #dbe4ee !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .allocation-summary > div:nth-child(1) {
+        font-size: 0 !important;
+        margin-bottom: 2px !important;
+    }
+
+    .allocation-summary > div:nth-child(1)::after {
+        content: "ROOM ALLOCATION";
+        font-size: 7pt !important;
+        font-weight: 700 !important;
+        letter-spacing: 1px !important;
+        color: #64748b !important;
+    }
+
+    .allocation-summary > div:nth-child(2) {
+        margin: 0 !important;
+        font-size: 21pt !important;
+        line-height: 1.05 !important;
+        font-weight: 700 !important;
+        color: #1e3a5f !important;
+    }
+
+    .allocation-summary > div:nth-child(3) {
+        margin: 2px 0 0 !important;
+        font-size: 10pt !important;
+        line-height: 1.2 !important;
+        color: #059669 !important;
+    }
+
+    .allocation-summary > div:nth-child(4) {
+        margin: 2px 0 0 !important;
+        font-size: 7.5pt !important;
+        line-height: 1.2 !important;
+        color: #64748b !important;
+    }
+
+    .student-profile-print {
+        display: grid !important;
+        grid-template-columns: 55px 1fr !important;
+        align-items: center !important;
+        gap: 9px !important;
+        margin: 0 0 8px !important;
+        padding: 7px !important;
+        background: #f8fafc !important;
+        border: 1px solid #dbe4ee !important;
+        border-radius: 5px !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .student-profile-print > div:first-child {
+        width: 55px !important;
+        height: 68px !important;
+        border-radius: 4px !important;
+    }
+
+    .student-profile-print img {
+        width: 100% !important;
+        height: 100% !important;
+        object-fit: cover !important;
+    }
+
+    .student-profile-print span {
+        font-size: 17pt !important;
+    }
+
+    .student-profile-print > div:last-child {
+        min-width: 0 !important;
+    }
+
+    .student-profile-print > div:last-child > div:first-child {
+        margin-bottom: 2px !important;
+        font-size: 6.5pt !important;
+    }
+
+    .student-profile-print > div:last-child > div:last-child {
+        font-size: 10pt !important;
+        line-height: 1.2 !important;
+    }
+
+    .student-details {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 0 !important;
+        margin: 0 !important;
+        border: 1px solid #dbe4ee !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .student-details > div {
+        min-width: 0 !important;
+        padding: 5px 7px !important;
+        border-right: 1px solid #dbe4ee !important;
+        border-bottom: 1px solid #dbe4ee !important;
+    }
+
+    .student-details > div:nth-child(even) {
+        border-right: 0 !important;
+    }
+
+    .student-details > div > div:first-child {
+        margin-bottom: 2px !important;
+        font-size: 6.5pt !important;
+        line-height: 1.05 !important;
+        color: #64748b !important;
+    }
+
+    .student-details > div > div:last-child {
+        font-size: 8pt !important;
+        line-height: 1.2 !important;
+        font-weight: 600 !important;
+        color: #111827 !important;
+        overflow-wrap: anywhere !important;
+    }
+
+    .allocation-note {
+        margin-top: 7px !important;
+        padding: 6px 8px !important;
+        border-radius: 4px !important;
+        font-size: 7pt !important;
+        line-height: 1.3 !important;
+        color: #065f46 !important;
+        background: #f0fdf4 !important;
+        border: 1px solid #bbf7d0 !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
+    }
+
+    .allocation-note strong {
+        font-size: 7pt !important;
+    }
+}
 .bunk-grid {
     display:grid;
     grid-template-columns:repeat(auto-fit,minmax(90px,1fr));
@@ -503,7 +754,7 @@ $csrf = csrf_token();
         </div>
 
         <!-- Allocation Card -->
-        <div class="card" style="border:2px solid #059669;max-width:640px;">
+        <div class="card allocation-slip" style="border:2px solid #059669;max-width:640px;">
             <div class="card-header"
                  style="background:linear-gradient(135deg,#1e3a5f,#2d6a4f);color:white;">
                 <h3 style="color:white;">Room Allocation Confirmed</h3>
@@ -515,7 +766,7 @@ $csrf = csrf_token();
 
             <div class="card-body">
 
-                <div style="text-align:center;padding:24px 0;border-bottom:1px solid #f1f5f9;margin-bottom:24px;">
+                <div class="allocation-summary" style="text-align:center;padding:24px 0;border-bottom:1px solid #f1f5f9;margin-bottom:24px;">
                     <div style="font-size:4rem;margin-bottom:8px;">Room</div>
 
                     <div style="font-size:2.5rem;font-weight:700;color:#1e3a5f;">
@@ -534,7 +785,7 @@ $csrf = csrf_token();
                     </div>
                 </div>
 
-                <div style="display:flex;align-items:center;gap:18px;margin-bottom:24px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">                    <div style="width:90px;height:110px;border-radius:8px;overflow:hidden;border:1px solid #cbd5e1;background:#e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">                        <?php if (!empty($student['profile_photo'])): ?>                            <img src="../<?= htmlspecialchars($student['profile_photo']) ?>" alt="Student photograph" style="width:100%;height:100%;object-fit:cover;">                        <?php else: ?>                            <span style="font-size:2rem;font-weight:700;color:#64748b;"><?= strtoupper(substr($student['full_name'], 0, 1)) ?></span>                        <?php endif; ?>                    </div>                    <div>                        <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:4px;">Student Photograph</div>                        <div style="font-weight:600;color:#1e3a5f;"><?= htmlspecialchars($student['full_name']) ?></div>                    </div>                </div>                <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
+                <div class="student-profile-print" style="display:flex;align-items:center;gap:18px;margin-bottom:24px;padding:16px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;">                    <div style="width:90px;height:110px;border-radius:8px;overflow:hidden;border:1px solid #cbd5e1;background:#e2e8f0;display:flex;align-items:center;justify-content:center;flex-shrink:0;">                        <?php if (!empty($student['profile_photo'])): ?>                            <img src="../<?= htmlspecialchars($student['profile_photo']) ?>" alt="Student photograph" style="width:100%;height:100%;object-fit:cover;">                        <?php else: ?>                            <span style="font-size:2rem;font-weight:700;color:#64748b;"><?= strtoupper(substr($student['full_name'], 0, 1)) ?></span>                        <?php endif; ?>                    </div>                    <div>                        <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:4px;">Student Photograph</div>                        <div style="font-weight:600;color:#1e3a5f;"><?= htmlspecialchars($student['full_name']) ?></div>                    </div>                </div>                <div class="student-details" style="display:grid;grid-template-columns:1fr 1fr;gap:20px;">
 
                     <div>
                         <div style="font-size:0.75rem;color:#64748b;text-transform:uppercase;font-weight:600;margin-bottom:4px;">
@@ -621,7 +872,7 @@ $csrf = csrf_token();
 
                 </div>
 
-                <div style="margin-top:24px;padding:14px;background:#f0fdf4;border-radius:8px;font-size:0.875rem;color:#065f46;border:1px solid #bbf7d0;">
+                <div class="allocation-note" style="margin-top:24px;padding:14px;background:#f0fdf4;border-radius:8px;font-size:0.875rem;color:#065f46;border:1px solid #bbf7d0;">
                     <strong>Note:</strong>
                     Please report to the hostel management office with this allocation notice,
                     your student ID card, and your payment receipt to collect your room key
@@ -764,7 +1015,3 @@ $csrf = csrf_token();
 
 </body>
 </html>
-
-
-
-
