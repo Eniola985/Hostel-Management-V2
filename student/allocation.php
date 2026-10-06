@@ -731,12 +731,6 @@ $csrf = csrf_token();
             <p>Session: <?= date('Y') ?>/<?= date('Y') + 1 ?></p>
         </div>
 
-        <div class="no-print" style="margin-bottom:16px;">
-            <button onclick="window.print()" class="btn btn-info">
-                Print Allocation Letter
-            </button>
-        </div>
-
         <!-- Allocation Card -->
         <div class="card allocation-slip" style="border:2px solid #059669;max-width:640px;">
             <div class="card-header"
@@ -864,6 +858,12 @@ $csrf = csrf_token();
                 </div>
 
             </div>
+        </div>
+
+        <div class="no-print" style="margin-top:20px;text-align:center;max-width:640px;">
+            <button onclick="window.print()" class="btn btn-info" style="padding:12px 28px;font-size:0.95rem;display:inline-flex;align-items:center;gap:8px;font-weight:600;box-shadow:0 4px 12px rgba(2,132,199,0.25);">
+                🖨 Print Allocation Slip
+            </button>
         </div>
 
     <?php elseif (
