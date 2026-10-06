@@ -38,13 +38,44 @@ if (isset($_GET['delete_room'])) {
     }
 }
 
+$search = trim($_GET['search'] ?? '');
+$status_filter = trim($_GET['status'] ?? '');
+$limit = (int)($_GET['limit'] ?? 10);
+if (!in_array($limit, [10, 20, 30, 40, 50], true)) {
+    $limit = 10;
+}
+$page = max(1, (int)($_GET['page'] ?? 1));
+$offset = ($page - 1) * $limit;
+
+$sql_base = "FROM rooms r WHERE r.hostel_id = ?";
+$params = [$hostel_id];
+
+if ($search !== '') {
+    $sql_base .= " AND r.room_number LIKE ?";
+    $params[] = "%{$search}%";
+}
+
+if ($status_filter !== '') {
+    $sql_base .= " AND r.status = ?";
+    $params[] = $status_filter;
+}
+
+// Count total
+$count_stmt = $pdo->prepare("SELECT COUNT(*) " . $sql_base);
+$count_stmt->execute($params);
+$total_rooms_count = (int)$count_stmt->fetchColumn();
+$total_pages = max(1, (int)ceil($total_rooms_count / $limit));
+if ($page > $total_pages) {
+    $page = $total_pages;
+    $offset = ($page - 1) * $limit;
+}
+
 $roomsStmt = $pdo->prepare("SELECT r.*, COUNT(a.allocation_id) AS alloc_count
-    FROM rooms r
+    " . $sql_base . "
     LEFT JOIN allocations a ON r.room_id=a.room_id AND a.status='Active'
-    WHERE r.hostel_id=?
     GROUP BY r.room_id
-    ORDER BY r.room_number");
-$roomsStmt->execute([$hostel_id]);
+    ORDER BY r.room_number LIMIT " . (int)$limit . " OFFSET " . (int)$offset);
+$roomsStmt->execute($params);
 $rooms = $roomsStmt->fetchAll();
 ?>
 <!DOCTYPE html>
@@ -52,7 +83,7 @@ $rooms = $roomsStmt->fetchAll();
 <head>
 <meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Rooms - <?= htmlspecialchars($hostel['hostel_name']) ?></title>
-<link rel="stylesheet" href="../css/style.css?v=7">
+<link rel="stylesheet" href="../css/style.css?v=8">
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
 </head>
 <body>
@@ -86,7 +117,48 @@ $rooms = $roomsStmt->fetchAll();
     </div>
 
     <div class="card">
-        <div class="card-header"><h3>Rooms (<?= count($rooms) ?>)</h3></div>
+        <div class="card-header">
+            <h3>Rooms (<?= $total_rooms_count ?>)</h3>
+
+            <form method="GET" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <input
+                    type="text"
+                    name="search"
+                    value="<?= htmlspecialchars($search) ?>"
+                    placeholder="Search room number..."
+                    style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:Inter,sans-serif;font-size:0.875rem;width:180px;"
+                >
+
+                <select
+                    name="status"
+                    style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:Inter,sans-serif;font-size:0.875rem;background:white;"
+                >
+                    <option value="">All Statuses</option>
+                    <option value="Available" <?= $status_filter === 'Available' ? 'selected' : '' ?>>Available</option>
+                    <option value="Full" <?= $status_filter === 'Full' ? 'selected' : '' ?>>Full</option>
+                </select>
+
+                <select
+                    name="limit"
+                    style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:Inter,sans-serif;font-size:0.875rem;background:white;"
+                >
+                    <option value="10" <?= $limit === 10 ? 'selected' : '' ?>>10 per page</option>
+                    <option value="20" <?= $limit === 20 ? 'selected' : '' ?>>20 per page</option>
+                    <option value="30" <?= $limit === 30 ? 'selected' : '' ?>>30 per page</option>
+                    <option value="40" <?= $limit === 40 ? 'selected' : '' ?>>40 per page</option>
+                    <option value="50" <?= $limit === 50 ? 'selected' : '' ?>>50 per page</option>
+                </select>
+
+                <button type="submit" class="btn btn-info btn-sm">Filter</button>
+
+                <?php if ($search || $status_filter || $limit !== 10): ?>
+                    <a href="rooms.php" class="btn btn-sm" style="background:#f1f5f9;color:#475569;">
+                        Reset
+                    </a>
+                <?php endif; ?>
+            </form>
+        </div>
+
         <div class="room-grid">
             <?php foreach ($rooms as $r): ?>
             <div class="room-item <?= strtolower($r['status']) ?>">
@@ -103,9 +175,49 @@ $rooms = $roomsStmt->fetchAll();
             </div>
             <?php endforeach; ?>
             <?php if (!$rooms): ?>
-                <div class="empty-state"><span class="empty-icon">🚪</span><p>No rooms added yet.</p></div>
+                <div class="empty-state"><span class="empty-icon">🚪</span><p>No rooms match current filters.</p></div>
             <?php endif; ?>
         </div>
+
+        <?php if ($total_pages > 1 || $total_rooms_count > 0): ?>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-top:1px solid #e2e8f0;flex-wrap:wrap;gap:12px;font-size:0.85rem;color:#64748b;">
+                <div>
+                    Showing <?= min($total_rooms_count, $offset + 1) ?> to <?= min($total_rooms_count, $offset + $limit) ?> of <?= $total_rooms_count ?> rooms
+                </div>
+
+                <div class="pagination">
+                    <?php
+                    $queryParams = $_GET;
+                    function adminRoomsPageUrl($p, $params) {
+                        $params['page'] = $p;
+                        return 'rooms.php?' . http_build_query($params);
+                    }
+                    ?>
+
+                    <?php if ($page > 1): ?>
+                        <a href="<?= adminRoomsPageUrl($page - 1, $queryParams) ?>" class="prev-btn">&larr; Previous</a>
+                    <?php else: ?>
+                        <span class="page-btn disabled prev-btn">&larr; Previous</span>
+                    <?php endif; ?>
+
+                    <?php for ($p = 1; $p <= $total_pages; $p++): ?>
+                        <?php if ($p == $page): ?>
+                            <span class="page-btn active"><?= $p ?></span>
+                        <?php elseif ($p == 1 || $p == $total_pages || ($p >= $page - 2 && $p <= $page + 2)): ?>
+                            <a href="<?= adminRoomsPageUrl($p, $queryParams) ?>"><?= $p ?></a>
+                        <?php elseif ($p == $page - 3 || $p == $page + 3): ?>
+                            <span style="padding:0 4px;color:#94a3b8;">&hellip;</span>
+                        <?php endif; ?>
+                    <?php endfor; ?>
+
+                    <?php if ($page < $total_pages): ?>
+                        <a href="<?= adminRoomsPageUrl($page + 1, $queryParams) ?>" class="next-btn">Next &rarr;</a>
+                    <?php else: ?>
+                        <span class="page-btn disabled next-btn">Next &rarr;</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
     </div>
 </main>
 </div>

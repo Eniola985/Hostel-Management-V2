@@ -79,7 +79,7 @@ if (isset($_GET['delete_room'])) {
     }
 }
 
-// Load hostels
+// Load hostels for dropdown & filter
 $hostelsStmt = $pdo->query(
     'SELECT hostel_id, hostel_name, hostel_type
      FROM hostels
@@ -88,30 +88,57 @@ $hostelsStmt = $pdo->query(
 
 $hostels = $hostelsStmt->fetchAll();
 
-// Load all rooms
-$roomsStmt = $pdo->query(
-    "SELECT
-        r.*,
-        h.hostel_name,
-        h.hostel_type,
-        COUNT(a.allocation_id) AS alloc_count
-     FROM rooms r
-     JOIN hostels h
-        ON h.hostel_id = r.hostel_id
-     LEFT JOIN allocations a
-        ON a.room_id = r.room_id
-        AND a.status = 'Active'
-     GROUP BY
-        r.room_id,
-        h.hostel_name,
-        h.hostel_type
-     ORDER BY
-        h.hostel_type,
-        h.hostel_name,
-        r.room_number"
-);
+// Pagination and filtering for rooms
+$search = trim($_GET['search'] ?? '');
+$hostel_filter = (int)($_GET['hostel_id'] ?? 0);
+$status_filter = trim($_GET['status'] ?? '');
+$limit = (int)($_GET['limit'] ?? 10);
+if (!in_array($limit, [10, 20, 30, 40, 50], true)) {
+    $limit = 10;
+}
+$page = max(1, (int)($_GET['page'] ?? 1));
+$offset = ($page - 1) * $limit;
 
-$rooms = $roomsStmt->fetchAll();
+$sql_base = "FROM rooms r
+             JOIN hostels h ON h.hostel_id = r.hostel_id
+             WHERE 1=1";
+$params = [];
+
+if ($search !== '') {
+    $sql_base .= " AND (r.room_number LIKE ? OR h.hostel_name LIKE ?)";
+    $searchLike = "%{$search}%";
+    $params[] = $searchLike;
+    $params[] = $searchLike;
+}
+
+if ($hostel_filter > 0) {
+    $sql_base .= " AND r.hostel_id = ?";
+    $params[] = $hostel_filter;
+}
+
+if ($status_filter !== '') {
+    $sql_base .= " AND r.status = ?";
+    $params[] = $status_filter;
+}
+
+// Count total
+$count_stmt = $pdo->prepare("SELECT COUNT(*) " . $sql_base);
+$count_stmt->execute($params);
+$total_rooms_count = (int)$count_stmt->fetchColumn();
+$total_pages = max(1, (int)ceil($total_rooms_count / $limit));
+if ($page > $total_pages) {
+    $page = $total_pages;
+    $offset = ($page - 1) * $limit;
+}
+
+// Fetch slice
+$sql = "SELECT r.*, h.hostel_name, h.hostel_type "
+     . $sql_base
+     . " ORDER BY h.hostel_type, h.hostel_name, r.room_number LIMIT " . (int)$limit . " OFFSET " . (int)$offset;
+
+$stmt = $pdo->prepare($sql);
+$stmt->execute($params);
+$rooms = $stmt->fetchAll();
 ?>
 <!DOCTYPE html>
 <html lang="en">
@@ -121,7 +148,7 @@ $rooms = $roomsStmt->fetchAll();
 
 <title>Rooms - General Admin</title>
 
-<link rel="stylesheet" href="../css/style.css?v=7">
+<link rel="stylesheet" href="../css/style.css?v=8">
 
 <link
     href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap"
@@ -135,7 +162,6 @@ $rooms = $roomsStmt->fetchAll();
 
 <?php $current_page = 'rooms'; require_once '../includes/general_admin_sidebar.php'; ?>
 
-
 <main class="main">
 
     <a href="dashboard.php" class="back-btn">&larr; Back to Dashboard</a>
@@ -147,13 +173,12 @@ $rooms = $roomsStmt->fetchAll();
     </div>
 
     <div class="page-title">
-        Room Management
+        Rooms Management
     </div>
 
     <div class="page-subtitle">
-        View and manage rooms across all registered hostels.
+        System-wide room capacity and allocation overview.
     </div>
-
 
     <?php if ($msg): ?>
         <div class="alert alert-success">
@@ -161,53 +186,37 @@ $rooms = $roomsStmt->fetchAll();
         </div>
     <?php endif; ?>
 
-
     <?php if ($err): ?>
         <div class="alert alert-error">
             <?= htmlspecialchars($err) ?>
         </div>
     <?php endif; ?>
 
+    <div class="card" style="margin-bottom:24px;">
 
-    <div class="form-card" style="max-width:100%;margin-bottom:24px;">
+        <div class="card-header">
+            <h3>Add New Room</h3>
+        </div>
 
-        <h3>🚪 Add Room</h3>
+        <form method="POST" style="padding:20px;">
 
-        <form method="POST">
-
-            <div class="form-row">
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;">
 
                 <div class="form-group">
-
-                    <label>Hostel</label>
-
+                    <label>Select Hostel</label>
                     <select name="hostel_id" required>
-
-                        <option value="">
-                            Select Hostel
-                        </option>
-
-                        <?php foreach ($hostels as $h): ?>
-
-                            <option value="<?= (int)$h['hostel_id'] ?>">
-
-                                <?= htmlspecialchars($h['hostel_name']) ?>
-                                -
-                                <?= htmlspecialchars($h['hostel_type']) ?>
-
+                        <option value="">Select Hostel</option>
+                        <?php foreach ($hostels as $hostel): ?>
+                            <option value="<?= (int)$hostel['hostel_id'] ?>">
+                                <?= htmlspecialchars($hostel['hostel_name']) ?>
+                                (<?= htmlspecialchars($hostel['hostel_type']) ?>)
                             </option>
-
                         <?php endforeach; ?>
-
                     </select>
-
                 </div>
 
-
                 <div class="form-group">
-
                     <label>Room Number</label>
-
                     <input
                         type="text"
                         name="room_number"
@@ -215,14 +224,10 @@ $rooms = $roomsStmt->fetchAll();
                         maxlength="50"
                         required
                     >
-
                 </div>
 
-
                 <div class="form-group">
-
                     <label>Capacity (Students)</label>
-
                     <input
                         type="number"
                         name="capacity"
@@ -231,7 +236,6 @@ $rooms = $roomsStmt->fetchAll();
                         value="4"
                         required
                     >
-
                 </div>
 
             </div>
@@ -248,32 +252,71 @@ $rooms = $roomsStmt->fetchAll();
 
     </div>
 
-
     <div class="card">
 
         <div class="card-header">
-
             <h3>
-                All Rooms (<?= count($rooms) ?>)
+                All Rooms (<?= $total_rooms_count ?>)
             </h3>
 
-        </div>
+            <form method="GET" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <input
+                    type="text"
+                    name="search"
+                    value="<?= htmlspecialchars($search) ?>"
+                    placeholder="Search room, hostel..."
+                    style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:Inter,sans-serif;font-size:0.875rem;width:180px;"
+                >
 
+                <select
+                    name="hostel_id"
+                    style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:Inter,sans-serif;font-size:0.875rem;background:white;"
+                >
+                    <option value="">All Hostels</option>
+                    <?php foreach ($hostels as $h): ?>
+                        <option value="<?= (int)$h['hostel_id'] ?>" <?= $hostel_filter === (int)$h['hostel_id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($h['hostel_name']) ?>
+                        </option>
+                    <?php endforeach; ?>
+                </select>
+
+                <select
+                    name="status"
+                    style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:Inter,sans-serif;font-size:0.875rem;background:white;"
+                >
+                    <option value="">All Statuses</option>
+                    <option value="Available" <?= $status_filter === 'Available' ? 'selected' : '' ?>>Available</option>
+                    <option value="Full" <?= $status_filter === 'Full' ? 'selected' : '' ?>>Full</option>
+                </select>
+
+                <select
+                    name="limit"
+                    style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:Inter,sans-serif;font-size:0.875rem;background:white;"
+                >
+                    <option value="10" <?= $limit === 10 ? 'selected' : '' ?>>10 per page</option>
+                    <option value="20" <?= $limit === 20 ? 'selected' : '' ?>>20 per page</option>
+                    <option value="30" <?= $limit === 30 ? 'selected' : '' ?>>30 per page</option>
+                    <option value="40" <?= $limit === 40 ? 'selected' : '' ?>>40 per page</option>
+                    <option value="50" <?= $limit === 50 ? 'selected' : '' ?>>50 per page</option>
+                </select>
+
+                <button type="submit" class="btn btn-info btn-sm">Filter</button>
+
+                <?php if ($search || $hostel_filter || $status_filter || $limit !== 10): ?>
+                    <a href="rooms.php" class="btn btn-sm" style="background:#f1f5f9;color:#475569;">
+                        Reset
+                    </a>
+                <?php endif; ?>
+            </form>
+        </div>
 
         <div class="table-wrap">
 
             <?php if (!$rooms): ?>
 
                 <div class="empty-state">
-
-                    <span class="empty-icon">
-                        🚪
-                    </span>
-
-                    <p>
-                        No rooms have been added yet.
-                    </p>
-
+                    <span class="empty-icon">🚪</span>
+                    <p>No rooms found matching current filters.</p>
                 </div>
 
             <?php else: ?>
@@ -281,7 +324,6 @@ $rooms = $roomsStmt->fetchAll();
                 <table>
 
                     <thead>
-
                         <tr>
                             <th>#</th>
                             <th>Hostel</th>
@@ -292,7 +334,6 @@ $rooms = $roomsStmt->fetchAll();
                             <th>Status</th>
                             <th>Action</th>
                         </tr>
-
                     </thead>
 
                     <tbody>
@@ -300,10 +341,7 @@ $rooms = $roomsStmt->fetchAll();
                     <?php foreach ($rooms as $i => $room): ?>
 
                         <tr>
-
-                            <td>
-                                <?= $i + 1 ?>
-                            </td>
+                            <td><?= $offset + $i + 1 ?></td>
 
                             <td>
                                 <strong>
@@ -322,21 +360,21 @@ $rooms = $roomsStmt->fetchAll();
                             </td>
 
                             <td>
-                                <?= (int)$room['capacity'] ?>
+                                <?= (int)$room['capacity'] ?> Beds
                             </td>
 
                             <td>
-                                <?= (int)$room['occupied'] ?>
+                                <?= (int)$room['occupied'] ?> / <?= (int)$room['capacity'] ?>
                             </td>
 
                             <td>
-                                <?= htmlspecialchars($room['status']) ?>
+                                <span class="badge <?= $room['status'] === 'Available' ? 'badge-success' : 'badge-danger' ?>">
+                                    <?= htmlspecialchars($room['status']) ?>
+                                </span>
                             </td>
 
                             <td>
-
                                 <?php if ((int)$room['occupied'] === 0): ?>
-
                                     <a
                                         href="?delete_room=<?= (int)$room['room_id'] ?>"
                                         class="btn btn-danger btn-sm"
@@ -344,17 +382,12 @@ $rooms = $roomsStmt->fetchAll();
                                     >
                                         Delete
                                     </a>
-
                                 <?php else: ?>
-
                                     <span style="color:#94a3b8;font-size:.8rem;">
                                         Occupied
                                     </span>
-
                                 <?php endif; ?>
-
                             </td>
-
                         </tr>
 
                     <?php endforeach; ?>
@@ -362,6 +395,46 @@ $rooms = $roomsStmt->fetchAll();
                     </tbody>
 
                 </table>
+
+                <?php if ($total_pages > 1 || $total_rooms_count > 0): ?>
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-top:1px solid #e2e8f0;flex-wrap:wrap;gap:12px;font-size:0.85rem;color:#64748b;">
+                        <div>
+                            Showing <?= min($total_rooms_count, $offset + 1) ?> to <?= min($total_rooms_count, $offset + $limit) ?> of <?= $total_rooms_count ?> rooms
+                        </div>
+
+                        <div class="pagination">
+                            <?php
+                            $queryParams = $_GET;
+                            function gaRoomsPageUrl($p, $params) {
+                                $params['page'] = $p;
+                                return 'rooms.php?' . http_build_query($params);
+                            }
+                            ?>
+
+                            <?php if ($page > 1): ?>
+                                <a href="<?= gaRoomsPageUrl($page - 1, $queryParams) ?>" class="prev-btn">&larr; Previous</a>
+                            <?php else: ?>
+                                <span class="page-btn disabled prev-btn">&larr; Previous</span>
+                            <?php endif; ?>
+
+                            <?php for ($p = 1; $p <= $total_pages; $p++): ?>
+                                <?php if ($p == $page): ?>
+                                    <span class="page-btn active"><?= $p ?></span>
+                                <?php elseif ($p == 1 || $p == $total_pages || ($p >= $page - 2 && $p <= $page + 2)): ?>
+                                    <a href="<?= gaRoomsPageUrl($p, $queryParams) ?>"><?= $p ?></a>
+                                <?php elseif ($p == $page - 3 || $p == $page + 3): ?>
+                                    <span style="padding:0 4px;color:#94a3b8;">&hellip;</span>
+                                <?php endif; ?>
+                            <?php endfor; ?>
+
+                            <?php if ($page < $total_pages): ?>
+                                <a href="<?= gaRoomsPageUrl($page + 1, $queryParams) ?>" class="next-btn">Next &rarr;</a>
+                            <?php else: ?>
+                                <span class="page-btn disabled next-btn">Next &rarr;</span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endif; ?>
 
             <?php endif; ?>
 
