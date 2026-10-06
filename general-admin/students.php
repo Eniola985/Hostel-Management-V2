@@ -40,7 +40,9 @@ if ($search !== '') {
     $params[] = $search_param;
 }
 
-if ($status_filter === 'Allocated') {
+if ($status_filter === 'Accepted') {
+    $sql_base .= " AND (a.status IN ('Approved', 'Allocated') OR al.allocation_id IS NOT NULL)";
+} elseif ($status_filter === 'Allocated') {
     $sql_base .= " AND (a.status = 'Allocated' OR al.allocation_id IS NOT NULL)";
 } elseif ($status_filter === 'Approved') {
     $sql_base .= " AND a.status = 'Approved' AND al.allocation_id IS NULL";
@@ -162,8 +164,9 @@ $hostels = $hostelsStmt->fetchAll();
                     style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:Inter,sans-serif;font-size:0.875rem;background:white;"
                 >
                     <option value="">All Statuses</option>
-                    <option value="Allocated" <?= $status_filter === 'Allocated' ? 'selected' : '' ?>>Accepted / Allocated</option>
-                    <option value="Approved" <?= $status_filter === 'Approved' ? 'selected' : '' ?>>Approved</option>
+                    <option value="Accepted" <?= $status_filter === 'Accepted' ? 'selected' : '' ?>>Accepted (Approved / Allocated)</option>
+                    <option value="Allocated" <?= $status_filter === 'Allocated' ? 'selected' : '' ?>>Allocated to Room</option>
+                    <option value="Approved" <?= $status_filter === 'Approved' ? 'selected' : '' ?>>Approved (Awaiting Room)</option>
                     <option value="Pending" <?= $status_filter === 'Pending' ? 'selected' : '' ?>>Pending Review</option>
                     <option value="Rejected" <?= $status_filter === 'Rejected' ? 'selected' : '' ?>>Rejected</option>
                     <option value="Not Applied" <?= $status_filter === 'Not Applied' ? 'selected' : '' ?>>Not Applied</option>

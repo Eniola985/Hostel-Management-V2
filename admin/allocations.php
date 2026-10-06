@@ -294,16 +294,56 @@ if (isset($_GET['vacate'])) {
     }
 }
 
-// Current active and vacated allocations in this hostel.
+// Current active and vacated allocations in this hostel with pagination and filtering.
+$search = trim($_GET['search'] ?? '');
+$status_filter = trim($_GET['status'] ?? '');
+$limit = (int)($_GET['limit'] ?? 10);
+if (!in_array($limit, [10, 20, 30, 40, 50], true)) {
+    $limit = 10;
+}
+$page = max(1, (int)($_GET['page'] ?? 1));
+$offset = ($page - 1) * $limit;
+
+$alloc_base = "FROM allocations a
+               JOIN students s ON a.student_id=s.student_id
+               JOIN rooms r ON a.room_id=r.room_id
+               JOIN hostels h ON r.hostel_id=h.hostel_id
+               WHERE r.hostel_id=?";
+$alloc_params = [$admin_hostel_id];
+
+if ($search !== '') {
+    $alloc_base .= " AND (
+        s.full_name LIKE ?
+        OR s.form_no LIKE ?
+        OR s.department LIKE ?
+        OR r.room_number LIKE ?
+    )";
+    $searchLike = "%{$search}%";
+    $alloc_params[] = $searchLike;
+    $alloc_params[] = $searchLike;
+    $alloc_params[] = $searchLike;
+    $alloc_params[] = $searchLike;
+}
+
+if ($status_filter !== '') {
+    $alloc_base .= " AND a.status = ?";
+    $alloc_params[] = $status_filter;
+}
+
+// Count total
+$count_alloc_stmt = $pdo->prepare("SELECT COUNT(*) " . $alloc_base);
+$count_alloc_stmt->execute($alloc_params);
+$total_allocs_count = (int)$count_alloc_stmt->fetchColumn();
+$total_pages = max(1, (int)ceil($total_allocs_count / $limit));
+if ($page > $total_pages) {
+    $page = $total_pages;
+    $offset = ($page - 1) * $limit;
+}
+
 $allocStmt = $pdo->prepare("SELECT a.*, s.full_name, s.form_no, s.department, s.level,
-        r.room_number, h.hostel_name
-    FROM allocations a
-    JOIN students s ON a.student_id=s.student_id
-    JOIN rooms r ON a.room_id=r.room_id
-    JOIN hostels h ON r.hostel_id=h.hostel_id
-    WHERE r.hostel_id=?
-    ORDER BY a.allocation_date DESC");
-$allocStmt->execute([$admin_hostel_id]);
+        r.room_number, h.hostel_name " . $alloc_base . "
+    ORDER BY a.allocation_date DESC LIMIT " . (int)$limit . " OFFSET " . (int)$offset);
+$allocStmt->execute($alloc_params);
 $allocs = $allocStmt->fetchAll();
 
 // Approved students who have selected their room/bunk but do not yet have an active allocation.
@@ -501,7 +541,45 @@ studentSelect.addEventListener('change', function () {
 <div class="card">
 
         <div class="card-header">
-            <h3>Allocations (<?= count($allocs) ?>)</h3>
+            <h3>Allocations (<?= $total_allocs_count ?>)</h3>
+
+            <form method="GET" style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                <input
+                    type="text"
+                    name="search"
+                    value="<?= htmlspecialchars($search) ?>"
+                    placeholder="Search student, form, room..."
+                    style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:Inter,sans-serif;font-size:0.875rem;width:200px;"
+                >
+
+                <select
+                    name="status"
+                    style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:Inter,sans-serif;font-size:0.875rem;background:white;"
+                >
+                    <option value="">All Statuses</option>
+                    <option value="Active" <?= $status_filter === 'Active' ? 'selected' : '' ?>>Active Allocations</option>
+                    <option value="Vacated" <?= $status_filter === 'Vacated' ? 'selected' : '' ?>>Vacated</option>
+                </select>
+
+                <select
+                    name="limit"
+                    style="padding:8px 12px;border:1.5px solid #e2e8f0;border-radius:8px;font-family:Inter,sans-serif;font-size:0.875rem;background:white;"
+                >
+                    <option value="10" <?= $limit === 10 ? 'selected' : '' ?>>10 per page</option>
+                    <option value="20" <?= $limit === 20 ? 'selected' : '' ?>>20 per page</option>
+                    <option value="30" <?= $limit === 30 ? 'selected' : '' ?>>30 per page</option>
+                    <option value="40" <?= $limit === 40 ? 'selected' : '' ?>>40 per page</option>
+                    <option value="50" <?= $limit === 50 ? 'selected' : '' ?>>50 per page</option>
+                </select>
+
+                <button type="submit" class="btn btn-info btn-sm">Filter</button>
+
+                <?php if ($search || $status_filter || $limit !== 10): ?>
+                    <a href="allocations.php" class="btn btn-sm" style="background:#f1f5f9;color:#475569;">
+                        Reset
+                    </a>
+                <?php endif; ?>
+            </form>
         </div>
 
         <div class="table-wrap">
@@ -509,8 +587,8 @@ studentSelect.addEventListener('change', function () {
         <?php if (!$allocs): ?>
 
             <div class="empty-state">
-                <span class="empty-icon">??</span>
-                <p>No finalized allocations in this hostel yet.</p>
+                <span class="empty-icon">🛏</span>
+                <p>No finalized allocations found matching current filters.</p>
             </div>
 
         <?php else: ?>
@@ -536,7 +614,7 @@ studentSelect.addEventListener('change', function () {
 
             <tr>
 
-                <td><?= $i + 1 ?></td>
+                <td><?= $offset + $i + 1 ?></td>
 
                 <td>
                     <strong>
@@ -546,6 +624,7 @@ studentSelect.addEventListener('change', function () {
 
                 <td>
                     <?= htmlspecialchars($a['form_no'] ?? '') ?>
+                </td>
 
                 <td>
                     <?= htmlspecialchars($a['department']) ?>
@@ -592,6 +671,46 @@ studentSelect.addEventListener('change', function () {
             </tbody>
 
         </table>
+
+        <?php if ($total_pages > 1 || $total_allocs_count > 0): ?>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-top:1px solid #e2e8f0;flex-wrap:wrap;gap:12px;font-size:0.85rem;color:#64748b;">
+                <div>
+                    Showing <?= min($total_allocs_count, $offset + 1) ?> to <?= min($total_allocs_count, $offset + $limit) ?> of <?= $total_allocs_count ?> allocations
+                </div>
+
+                <div style="display:flex;gap:4px;align-items:center;">
+                    <?php
+                    $queryParams = $_GET;
+                    function adminAllocPageUrl($p, $params) {
+                        $params['page'] = $p;
+                        return 'allocations.php?' . http_build_query($params);
+                    }
+                    ?>
+
+                    <?php if ($page > 1): ?>
+                        <a href="<?= adminAllocPageUrl($page - 1, $queryParams) ?>" class="btn btn-sm" style="background:#f1f5f9;color:#334155;">&laquo; Prev</a>
+                    <?php else: ?>
+                        <span class="btn btn-sm" style="background:#f8fafc;color:#cbd5e1;cursor:not-allowed;">&laquo; Prev</span>
+                    <?php endif; ?>
+
+                    <?php for ($p = 1; $p <= $total_pages; $p++): ?>
+                        <?php if ($p == $page): ?>
+                            <span class="btn btn-sm" style="background:#075985;color:white;font-weight:700;"><?= $p ?></span>
+                        <?php elseif ($p == 1 || $p == $total_pages || ($p >= $page - 2 && $p <= $page + 2)): ?>
+                            <a href="<?= adminAllocPageUrl($p, $queryParams) ?>" class="btn btn-sm" style="background:#f1f5f9;color:#334155;"><?= $p ?></a>
+                        <?php elseif ($p == $page - 3 || $p == $page + 3): ?>
+                            <span style="padding:0 4px;">...</span>
+                        <?php endif; ?>
+                    <?php endfor; ?>
+
+                    <?php if ($page < $total_pages): ?>
+                        <a href="<?= adminAllocPageUrl($page + 1, $queryParams) ?>" class="btn btn-sm" style="background:#f1f5f9;color:#334155;">Next &raquo;</a>
+                    <?php else: ?>
+                        <span class="btn btn-sm" style="background:#f8fafc;color:#cbd5e1;cursor:not-allowed;">Next &raquo;</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+        <?php endif; ?>
 
         <?php endif; ?>
 
