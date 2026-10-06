@@ -710,7 +710,7 @@ tbody tr:hover td { background: #fafafa; }
 .pagination {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 8px;
     flex-wrap: wrap;
 }
 
@@ -718,29 +718,45 @@ tbody tr:hover td { background: #fafafa; }
     display: inline-flex;
     align-items: center;
     justify-content: center;
-    min-width: 34px;
-    height: 34px;
-    padding: 0 10px;
-    font-size: 0.85rem;
-    font-weight: 500;
+    min-width: 36px;
+    height: 36px;
+    padding: 0 12px;
+    font-size: 0.875rem;
+    font-weight: 600;
     text-decoration: none;
-    border-radius: 6px;
-    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    border: 1.5px solid #cbd5e1;
     background: #ffffff;
-    color: #334155;
+    color: #1e293b;
     transition: all 0.2s ease;
     cursor: pointer;
 }
 
 .pagination a:hover {
     background: #f1f5f9;
-    border-color: #94a3b8;
-    color: #0f172a;
+    border-color: #0284c7;
+    color: #0284c7;
+    transform: translateY(-1px);
+}
+
+.pagination a.next-btn, .pagination a.prev-btn {
+    background: #0284c7;
+    border-color: #0284c7;
+    color: #ffffff;
+    font-weight: 600;
+    padding: 0 16px;
+    box-shadow: 0 2px 6px rgba(2, 132, 199, 0.25);
+}
+
+.pagination a.next-btn:hover, .pagination a.prev-btn:hover {
+    background: #0369a1;
+    border-color: #0369a1;
+    color: #ffffff;
 }
 
 .pagination .active, .pagination span.active {
-    background: #0284c7 !important;
-    border-color: #0284c7 !important;
+    background: #0f172a !important;
+    border-color: #0f172a !important;
     color: #ffffff !important;
     font-weight: 700;
     cursor: default;
@@ -749,13 +765,9 @@ tbody tr:hover td { background: #fafafa; }
 .pagination .disabled, .pagination span.disabled {
     background: #f8fafc !important;
     border-color: #e2e8f0 !important;
-    color: #cbd5e1 !important;
+    color: #94a3b8 !important;
     cursor: not-allowed;
     pointer-events: none;
-}
-
-.pagination .prev-btn, .pagination .next-btn {
-    font-weight: 600;
     padding: 0 14px;
 }
 
