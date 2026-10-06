@@ -347,33 +347,9 @@ if ($student) {
 <body>
 
 <div class="wrapper">
-
-<aside class="sidebar">
-
-    <div class="user-info">
-        <div class="avatar"><?php if (!empty($student['profile_photo'])): ?><img src="../<?= htmlspecialchars($student['profile_photo']) ?>" alt="Student photograph" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"><?php else: ?><?= $student ? htmlspecialchars(strtoupper(substr($student['full_name'],0,1))) : '?' ?><?php endif; ?></div>
-
-        <div class="name">
-            <?= $student ? htmlspecialchars(explode(' ',$student['full_name'])[0]) : 'Student' ?>
-        </div>
-
-        <div class="role">
-    <?= $student ? htmlspecialchars($student['form_no']) : '' ?>
-</div>    </div>
-
-    <nav class="sidebar-nav">
-        <a href="dashboard.php">Dashboard</a>
-        <a href="apply.php" class="active">My Room Allocation</a>
-        <a href="payments.php">Payments</a>
-        <a href="reports.php">My Report</a>
-        <a href="profile.php">My Profile</a>
-        <a href="logout.php">Logout</a>
-    </nav>
-
-</aside>
-
+<?php $current_page = 'apply'; require_once '../includes/student_sidebar.php'; ?>
 <main class="main">
-
+    <a href="dashboard.php" class="back-btn">&larr; Back to Dashboard</a>
     <div class="page-title">Apply for Hostel Accommodation</div>
 
     <div class="page-subtitle">
@@ -789,7 +765,7 @@ function showAvailableRooms() {
         roomButton.innerHTML = `
             <strong>Room ${escapeHtml(room.room_number)}</strong>
             <span style="color:#64748b;">
-                — ${escapeHtml(availableText)}
+                Â— ${escapeHtml(availableText)}
             </span>
             <span style="display:block;margin-top:4px;color:#2563eb;font-size:13px;">
                 Click to select this room

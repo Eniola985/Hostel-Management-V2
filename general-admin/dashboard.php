@@ -106,115 +106,15 @@ $hostels = $hostel_stmt->fetchAll();
     <!-- =========================
          SIDEBAR
          ========================= -->
-    <aside class="sidebar">
-
-        <div class="user-info">
-
-            <div class="avatar">
-                <?= htmlspecialchars(strtoupper(substr($admin['username'], 0, 1))) ?>
-            </div>
-
-            <div class="name">
-                <?= htmlspecialchars($admin['username']) ?>
-            </div>
-
-            <div class="role">
-                General Administrator
-            </div>
-
-        </div>
-
-        <nav class="sidebar-nav">
-
-            <a href="dashboard.php" class="active">
-                <span>📊</span>
-                <span>Dashboard</span>
-            </a>
-
-            <div class="nav-section">
-                Hostels
-            </div>
-
-            <div class="nav-section">
-                Male Hostels
-            </div>
-
-            <?php foreach ($hostels as $hostel): ?>
-
-                <?php if ($hostel['hostel_type'] === 'Male'): ?>
-
-                    <a href="hostel.php?hostel_id=<?= (int) $hostel['hostel_id'] ?>">
-                        <span>🏠</span>
-                        <span>
-                            <?= htmlspecialchars($hostel['hostel_name']) ?>
-                        </span>
-                    </a>
-
-                <?php endif; ?>
-
-            <?php endforeach; ?>
-
-            <div class="nav-section">
-                Female Hostels
-            </div>
-
-            <?php foreach ($hostels as $hostel): ?>
-
-                <?php if ($hostel['hostel_type'] === 'Female'): ?>
-
-                    <a href="hostel.php?hostel_id=<?= (int) $hostel['hostel_id'] ?>">
-                        <span>🏠</span>
-                        <span>
-                            <?= htmlspecialchars($hostel['hostel_name']) ?>
-                        </span>
-                    </a>
-
-                <?php endif; ?>
-
-            <?php endforeach; ?>
-
-            <div class="nav-section">
-                Management
-            </div>
-
-            <a href="add_hostel.php">
-                <span>➕</span>
-                <span>Add Hostel</span>
-            </a>
-
-            <a href="rooms.php">
-                <span>🚪</span>
-                <span>Rooms</span>
-            </a>
-
-            <a href="students.php">
-                <span>👨‍🎓</span>
-                <span>Students</span>
-            </a>
-
-            <a href="reports.php">
-                <span>📈</span>
-                <span>Reports</span>
-            </a>
-
-            <div class="nav-section">
-                Account
-            </div>
-
-            <a href="logout.php">
-                <span>🚪</span>
-                <span>Logout</span>
-            </a>
-
-        </nav>
-
-    </aside>
+    <?php $current_page = 'dashboard'; require_once '../includes/general_admin_sidebar.php'; ?>
 
 
     <!-- =========================
          MAIN CONTENT
          ========================= -->
     <main class="main">
+
+        <a href="../index.php" class="back-btn">&larr; Back to Main Portal</a>
 
         <div class="breadcrumb">
             <span>General Admin</span>

@@ -51,29 +51,9 @@ $payments = $stmt->fetchAll();
 </head>
 <body>
 <div class="wrapper admin-layout">
-
-<aside class="sidebar">
-    <div class="user-info">
-        <div class="avatar">
-            <?= htmlspecialchars(strtoupper(substr($hostel['hostel_name'], 0, 1))) ?>
-        </div>
-        <div class="name"><?= htmlspecialchars($hostel['hostel_name']) ?></div>
-        <div class="role">Hostel Admin</div>
-    </div>
-
-    <nav class="sidebar-nav">
-        <a href="dashboard.php">Dashboard</a>
-        <a href="students.php">Students</a>
-        <a href="applications.php">Applications</a>
-        <a href="allocations.php">Allocations</a>
-        <a href="payments.php" class="active">Payments</a>
-        <a href="rooms.php">Rooms</a>
-        <a href="reports.php">Reports</a>
-        <a href="logout.php">Logout</a>
-    </nav>
-</aside>
-
+<?php $current_page = 'payments'; require_once '../includes/admin_sidebar.php'; ?>
 <main class="main">
+    <a href="dashboard.php" class="back-btn">&larr; Back to Dashboard</a>
     <div class="page-title"><?= htmlspecialchars($hostel['hostel_name']) ?> Payments</div>
     <div class="page-subtitle">
         Verified Remita payment records for students associated with this hostel.

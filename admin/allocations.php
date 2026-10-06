@@ -363,38 +363,11 @@ $avail_rooms = $roomsStmt->fetchAll();
 <body>
 
 <div class="wrapper admin-layout">
-
-<aside class="sidebar">
-
-    <div class="user-info">
-        <div class="avatar">A</div>
-
-        <div class="name">
-            <?= htmlspecialchars($_SESSION['admin_name']) ?>
-        </div>
-
-        <div class="role">
-            <?= htmlspecialchars($hostel['hostel_name']) ?> Admin
-        </div>
-    </div>
-
-    <nav class="sidebar-nav">
-        <a href="dashboard.php">Dashboard</a>
-        <a href="hostels.php">My Hostel</a>
-        <a href="students.php">Students</a>
-        <a href="applications.php">Applications</a>
-        <a href="allocations.php" class="active">Allocations</a>
-        <a href="payments.php">Payments</a>
-        <a href="reports.php">Reports</a>
-        <a href="logout.php">Logout</a>
-    </nav>
-
-</aside>
-
+<?php $current_page = 'allocations'; require_once '../includes/admin_sidebar.php'; ?>
 <main class="main">
-
+    <a href="dashboard.php" class="back-btn">&larr; Back to Dashboard</a>
     <div class="page-title">
-        Room Allocations — <?= htmlspecialchars($hostel['hostel_name']) ?>
+        Room Allocations Â— <?= htmlspecialchars($hostel['hostel_name']) ?>
     </div>
 
     <div class="page-subtitle">
@@ -433,11 +406,11 @@ $avail_rooms = $roomsStmt->fetchAll();
                         data-app-id="<?= (int)$student['app_id'] ?>"
                     >
                         <?= htmlspecialchars($student['full_name']) ?>
-                        —
+                        Â—
                         <?= htmlspecialchars($student['form_no'] ?: 'No Form No.') ?>
-                        — Room <?= htmlspecialchars($student['room_number']) ?>
+                        Â— Room <?= htmlspecialchars($student['room_number']) ?>
                         <?php if ((int)$student['uses_bunks'] === 1 && !empty($student['preferred_bunk'])): ?>
-                            — Bunk <?= htmlspecialchars($student['preferred_bunk']) ?>
+                            Â— Bunk <?= htmlspecialchars($student['preferred_bunk']) ?>
                         <?php endif; ?>
                     </option>
                 <?php endforeach; ?>

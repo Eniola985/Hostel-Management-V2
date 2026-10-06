@@ -26,24 +26,9 @@ $payment = $payment->fetch();
 </head>
 <body>
 <div class="wrapper">
-<aside class="sidebar">
-    <div class="user-info">
-        <div class="avatar"><?php if (!empty($student['profile_photo'])): ?><img src="../<?= htmlspecialchars($student['profile_photo']) ?>" alt="Student photograph" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"><?php else: ?><?= strtoupper(substr($student['full_name'],0,1)) ?><?php endif; ?></div>
-        <div class="name"><?= htmlspecialchars(explode(' ',$student['full_name'])[0]) ?></div>
-        <div class="role"><?= htmlspecialchars($student['form_no']) ?></div>
-    </div>
-    <nav class="sidebar-nav">
-        <a href="dashboard.php">🏠 Dashboard</a>
-        <a href="apply.php">📝 Apply for Hostel</a>
-        <a href="status.php" class="active">📊 My Application Status</a>
-        <a href="allocation.php">🛏 My Room Allocation</a>
-        <a href="payments.php">💰 Payments</a>
-        <a href="reports.php">📄 My Report</a>
-        <a href="profile.php">👤 My Profile</a>
-        <a href="logout.php">🚪 Logout</a>
-    </nav>
-</aside>
+<?php $current_page = 'status'; require_once '../includes/student_sidebar.php'; ?>
 <main class="main">
+    <a href="dashboard.php" class="back-btn">&larr; Back to Dashboard</a>
     <div class="page-title">My Application Status</div>
     <div class="page-subtitle">Track the progress of your hostel accommodation application</div>
 

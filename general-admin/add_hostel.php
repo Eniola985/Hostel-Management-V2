@@ -148,111 +148,14 @@ $hostels = $hostels_stmt->fetchAll();
 <div class="wrapper admin-layout">
 
     <!-- SIDEBAR -->
-
-    <aside class="sidebar">
-
-        <div class="user-info">
-
-            <div class="avatar">
-                <?= htmlspecialchars(
-                    strtoupper(substr($admin['username'], 0, 1))
-                ) ?>
-            </div>
-
-            <div class="name">
-                <?= htmlspecialchars($admin['username']) ?>
-            </div>
-
-            <div class="role">
-                General Administrator
-            </div>
-
-        </div>
-
-
-        <nav class="sidebar-nav">
-
-            <a href="dashboard.php">
-                📊 Dashboard
-            </a>
-
-
-            <div class="nav-section">
-                Hostels
-            </div>
-
-
-            <div class="nav-section">
-                Male Hostels
-            </div>
-
-            <?php foreach ($hostels as $hostel): ?>
-
-                <?php if ($hostel['hostel_type'] === 'Male'): ?>
-
-                    <a href="hostel.php?hostel_id=<?= (int) $hostel['hostel_id'] ?>">
-                        🏠 <?= htmlspecialchars($hostel['hostel_name']) ?>
-                    </a>
-
-                <?php endif; ?>
-
-            <?php endforeach; ?>
-
-
-            <div class="nav-section">
-                Female Hostels
-            </div>
-
-            <?php foreach ($hostels as $hostel): ?>
-
-                <?php if ($hostel['hostel_type'] === 'Female'): ?>
-
-                    <a href="hostel.php?hostel_id=<?= (int) $hostel['hostel_id'] ?>">
-                        🏠 <?= htmlspecialchars($hostel['hostel_name']) ?>
-                    </a>
-
-                <?php endif; ?>
-
-            <?php endforeach; ?>
-
-
-            <div class="nav-section">
-                Management
-            </div>
-
-            <a href="add_hostel.php" class="active">
-                ➕ Add Hostel
-            </a>
-
-            <a href="rooms.php">
-                🚪 Rooms
-            </a>
-
-            <a href="students.php">
-                👨‍🎓 Students
-            </a>
-
-            <a href="reports.php">
-                📈 Reports
-            </a>
-
-
-            <div class="nav-section">
-                Account
-            </div>
-
-            <a href="logout.php">
-                🚪 Logout
-            </a>
-
-        </nav>
-
-    </aside>
+    <?php $current_page = 'add_hostel'; require_once '../includes/general_admin_sidebar.php'; ?>
 
 
     <!-- MAIN CONTENT -->
 
     <main class="main">
+
+        <a href="dashboard.php" class="back-btn">&larr; Back to Dashboard</a>
 
         <div class="breadcrumb">
             General Admin › Add Hostel

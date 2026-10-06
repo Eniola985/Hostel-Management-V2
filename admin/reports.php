@@ -64,24 +64,9 @@ if ($report === 'students') {
 <body>
 
 <div class="wrapper admin-layout">
-<aside class="sidebar no-print">
-    <div class="user-info">
-        <div class="avatar">A</div>
-        <div class="name"><?= htmlspecialchars($_SESSION['admin_name']) ?></div>
-        <div class="role">Administrator</div>
-    </div>
-    <nav class="sidebar-nav">
-        <a href="dashboard.php">🏠 Dashboard</a>
-        <a href="hostels.php">🏨 Manage Hostels</a>
-        <a href="students.php">👥 Students</a>
-        <a href="applications.php">📋 Applications</a>
-        <a href="allocations.php">🛏 Allocations</a>
-        <a href="payments.php">💰 Payments</a>
-        <a href="reports.php" class="active">📊 Reports</a>
-        <a href="logout.php">🚪 Logout</a>
-    </nav>
-</aside>
+<?php $current_page = 'reports'; require_once '../includes/admin_sidebar.php'; ?>
 <main class="main">
+    <a href="dashboard.php" class="back-btn no-print">&larr; Back to Dashboard</a>
     <div class="page-title no-print">Reports</div>
     <div class="page-subtitle no-print">Generate and print accommodation reports</div>
 

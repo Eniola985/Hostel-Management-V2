@@ -51,24 +51,9 @@ $apps = $apps->fetchAll();
 <body>
 
 <div class="wrapper admin-layout">
-<aside class="sidebar">
-    <div class="user-info">
-        <div class="avatar">A</div>
-        <div class="name"><?= htmlspecialchars($_SESSION['admin_name']) ?></div>
-        <div class="role">Administrator</div>
-    </div>
-    <nav class="sidebar-nav">
-        <a href="dashboard.php">🏠 Dashboard</a>
-        <a href="hostels.php">🏨 Manage Hostels</a>
-        <a href="students.php">👥 Students</a>
-        <a href="applications.php" class="active">📋 Applications</a>
-        <a href="allocations.php">🛏 Allocations</a>
-        <a href="payments.php">💰 Payments</a>
-        <a href="reports.php">📊 Reports</a>
-        <a href="logout.php">🚪 Logout</a>
-    </nav>
-</aside>
+<?php $current_page = 'applications'; require_once '../includes/admin_sidebar.php'; ?>
 <main class="main">
+    <a href="dashboard.php" class="back-btn">&larr; Back to Dashboard</a>
     <div class="page-title"><?= htmlspecialchars($hostel['hostel_name']) ?> Applications</div>
     <div class="page-subtitle">Review and process student accommodation applications</div>
     <?php if ($msg): ?><div class="alert alert-success"><?= htmlspecialchars($msg) ?></div><?php endif; ?>

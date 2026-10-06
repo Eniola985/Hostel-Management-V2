@@ -30,32 +30,9 @@ $payment = $payment->fetch();
 </head>
 <body>
 <div class="wrapper">
-<aside class="sidebar">
-    <div class="user-info">
-        <div class="avatar"><?php if (!empty($student['profile_photo'])): ?><img src="../<?= htmlspecialchars($student['profile_photo']) ?>" alt="Student photograph" style="width:100%;height:100%;object-fit:cover;border-radius:50%;"><?php else: ?><?= strtoupper(substr($student['full_name'],0,1)) ?><?php endif; ?></div>
-        <div class="name"><?= htmlspecialchars(explode(' ',$student['full_name'])[0]) ?></div>
-        <div class="role"><?= htmlspecialchars($student['email']) ?></div>
-        <div class="hostel-badge">
-            <?php if ($allocation): ?>
-                🏨 <?= htmlspecialchars($allocation['hostel_name']) ?>
-            <?php else: ?>
-                🏨 Hostel not assigned
-            <?php endif; ?>
-        </div>
-    </div>
-    <nav class="sidebar-nav">
-        <div class="nav-section">Student Menu</div>
-        <a href="dashboard.php" class="active">🏠 Dashboard</a>
-        <a href="apply.php">📝 Apply for Hostel</a>
-        <a href="status.php">📊 My Application Status</a>
-        <a href="allocation.php">🛏 My Room Allocation</a>
-        <a href="payments.php">💰 Payments</a>
-        <a href="reports.php">📄 My Report</a>
-        <a href="profile.php">👤 My Profile</a>
-        <a href="logout.php">🚪 Logout</a>
-    </nav>
-</aside>
+<?php $current_page = 'dashboard'; require_once '../includes/student_sidebar.php'; ?>
 <main class="main">
+    <a href="../index.php" class="back-btn">&larr; Back to Main Portal</a>
     <div class="page-title">Welcome, <?= htmlspecialchars(explode(' ',$student['full_name'])[0]) ?>! 👋</div>
     <div class="page-subtitle"><?= htmlspecialchars($student['department']) ?>, <?= htmlspecialchars($student['level']) ?></div>
 

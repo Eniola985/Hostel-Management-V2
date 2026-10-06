@@ -1,4 +1,4 @@
-﻿<?php
+<?php
 require_once '../includes/general_admin_auth.php';
 
 $admin = current_general_admin($pdo);
@@ -310,82 +310,12 @@ $hostels = $hostelsStmt->fetchAll();
 
 <div class="wrapper admin-layout">
 
-<aside class="sidebar no-print">
-
-    <div class="user-info">
-
-        <div class="avatar">
-            <?= htmlspecialchars(strtoupper(substr($admin['username'], 0, 1))) ?>
-        </div>
-
-        <div class="name">
-            <?= htmlspecialchars($admin['username']) ?>
-        </div>
-
-        <div class="role">
-            General Administrator
-        </div>
-
-    </div>
-
-
-    <nav class="sidebar-nav">
-
-        <a href="dashboard.php">
-            📊 <span>Dashboard</span>
-        </a>
-
-        <div class="nav-section">
-            Hostels
-        </div>
-
-        <?php foreach ($hostels as $hostel): ?>
-
-            <a href="hostel.php?hostel_id=<?= (int)$hostel['hostel_id'] ?>">
-                🏠
-                <span>
-                    <?= htmlspecialchars($hostel['hostel_name']) ?>
-                </span>
-            </a>
-
-        <?php endforeach; ?>
-
-
-        <div class="nav-section">
-            Management
-        </div>
-
-        <a href="add_hostel.php">
-            ➕ <span>Add Hostel</span>
-        </a>
-
-        <a href="rooms.php">
-            🚪 <span>Rooms</span>
-        </a>
-
-        <a href="students.php">
-            👨‍🎓 <span>Students</span>
-        </a>
-
-        <a href="reports.php" class="active">
-            📈 <span>Reports</span>
-        </a>
-
-
-        <div class="nav-section">
-            Account
-        </div>
-
-        <a href="logout.php">
-            🚪 <span>Logout</span>
-        </a>
-
-    </nav>
-
-</aside>
+<?php $current_page = 'reports'; require_once '../includes/general_admin_sidebar.php'; ?>
 
 
 <main class="main">
+
+    <a href="dashboard.php" class="back-btn no-print">&larr; Back to Dashboard</a>
 
     <div class="page-title no-print">
         Reports

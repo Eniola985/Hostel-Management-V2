@@ -34,27 +34,9 @@ $recent = $recent->fetchAll();
 </head>
 <body>
 <div class="wrapper admin-layout">
-    <aside class="sidebar">
-        <div class="user-info">
-            <div class="avatar">A</div>
-            <div class="name"><?= htmlspecialchars($_SESSION['admin_name']) ?></div>
-            <div class="role">Administrator</div>
-        </div>
-        <nav class="sidebar-nav">
-            <div class="nav-section">Main Menu</div>
-            <a href="dashboard.php" class="active">🏠 Dashboard</a>
-            <a href="hostels.php">🏨 Manage Hostels</a>
-            <a href="students.php">👥 Students</a>
-            <div class="nav-section">Operations</div>
-            <a href="applications.php">📋 Applications <?php if($pending > 0): ?><span class="badge badge-warning"><?= $pending ?></span><?php endif; ?></a>
-            <a href="allocations.php">🛏 Allocations</a>
-            <a href="payments.php">💰 Payments</a>
-            <div class="nav-section">Reports</div>
-            <a href="reports.php">📊 Generate Reports</a>
-            <a href="logout.php">🚪 Logout</a>
-        </nav>
-    </aside>
+<?php $current_page = 'dashboard'; require_once '../includes/admin_sidebar.php'; ?>
     <main class="main">
+        <a href="../index.php" class="back-btn">&larr; Back to Main Portal</a>
         <div class="page-title">Welcome, <?= htmlspecialchars($hostel['hostel_name']) ?> Admin 👋</div>
         <div class="page-subtitle">Here is a summary of <?= htmlspecialchars($hostel['hostel_name']) ?> accommodation activities</div>
 
