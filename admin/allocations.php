@@ -678,7 +678,7 @@ studentSelect.addEventListener('change', function () {
                     Showing <?= min($total_allocs_count, $offset + 1) ?> to <?= min($total_allocs_count, $offset + $limit) ?> of <?= $total_allocs_count ?> allocations
                 </div>
 
-                <div style="display:flex;gap:4px;align-items:center;">
+                <div class="pagination">
                     <?php
                     $queryParams = $_GET;
                     function adminAllocPageUrl($p, $params) {
@@ -688,25 +688,25 @@ studentSelect.addEventListener('change', function () {
                     ?>
 
                     <?php if ($page > 1): ?>
-                        <a href="<?= adminAllocPageUrl($page - 1, $queryParams) ?>" class="btn btn-sm" style="background:#f1f5f9;color:#334155;">&laquo; Prev</a>
+                        <a href="<?= adminAllocPageUrl($page - 1, $queryParams) ?>" class="prev-btn">&larr; Previous</a>
                     <?php else: ?>
-                        <span class="btn btn-sm" style="background:#f8fafc;color:#cbd5e1;cursor:not-allowed;">&laquo; Prev</span>
+                        <span class="page-btn disabled prev-btn">&larr; Previous</span>
                     <?php endif; ?>
 
                     <?php for ($p = 1; $p <= $total_pages; $p++): ?>
                         <?php if ($p == $page): ?>
-                            <span class="btn btn-sm" style="background:#075985;color:white;font-weight:700;"><?= $p ?></span>
+                            <span class="page-btn active"><?= $p ?></span>
                         <?php elseif ($p == 1 || $p == $total_pages || ($p >= $page - 2 && $p <= $page + 2)): ?>
-                            <a href="<?= adminAllocPageUrl($p, $queryParams) ?>" class="btn btn-sm" style="background:#f1f5f9;color:#334155;"><?= $p ?></a>
+                            <a href="<?= adminAllocPageUrl($p, $queryParams) ?>"><?= $p ?></a>
                         <?php elseif ($p == $page - 3 || $p == $page + 3): ?>
-                            <span style="padding:0 4px;">...</span>
+                            <span style="padding:0 4px;color:#94a3b8;">&hellip;</span>
                         <?php endif; ?>
                     <?php endfor; ?>
 
                     <?php if ($page < $total_pages): ?>
-                        <a href="<?= adminAllocPageUrl($page + 1, $queryParams) ?>" class="btn btn-sm" style="background:#f1f5f9;color:#334155;">Next &raquo;</a>
+                        <a href="<?= adminAllocPageUrl($page + 1, $queryParams) ?>" class="next-btn">Next &rarr;</a>
                     <?php else: ?>
-                        <span class="btn btn-sm" style="background:#f8fafc;color:#cbd5e1;cursor:not-allowed;">Next &raquo;</span>
+                        <span class="page-btn disabled next-btn">Next &rarr;</span>
                     <?php endif; ?>
                 </div>
             </div>
