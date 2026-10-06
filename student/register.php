@@ -13,8 +13,6 @@ $level = $_POST['level'] ?? '';
 $gender = $_POST['gender'] ?? '';
 $phone = trim($_POST['phone'] ?? '');
 $email = trim($_POST['email'] ?? '');
-$pass = $_POST['password'] ?? '';
-$confirm = $_POST['confirm_password'] ?? '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
@@ -35,10 +33,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $err = 'Please enter your phone number.';
     } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         $err = 'Please provide a valid email address.';
-    } elseif (strlen($pass) < 8) {
-        $err = 'Password must be at least 8 characters.';
-    } elseif ($pass !== $confirm) {
-        $err = 'Passwords do not match.';
     } elseif (!isset($_FILES['profile_photo']) || $_FILES['profile_photo']['error'] === UPLOAD_ERR_NO_FILE) {
         $err = 'Please upload a passport or identification photograph.';
     } elseif ($_FILES['profile_photo']['error'] !== UPLOAD_ERR_OK) {
@@ -90,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $saved_photo_path = $absolute_photo_path;
 
                         try {
-                            $password_hash = password_hash($pass, PASSWORD_DEFAULT);
+                            $password_hash = password_hash($form_no, PASSWORD_DEFAULT);
 
                             $statement = $pdo->prepare(
                                 "INSERT INTO students
@@ -120,7 +114,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 $photo_path
                             ]);
 
-                            $msg = 'Registration successful! You can now login with your form number.';
+                            $msg = 'Registration successful! Your default login password is your Form Number (' . htmlspecialchars($form_no) . '). You can now login.';
 
                             $form_no = '';
                             $name = '';
@@ -129,8 +123,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $gender = '';
                             $phone = '';
                             $email = '';
-                            $pass = '';
-                            $confirm = '';
                         } catch (PDOException $e) {
                             if ($saved_photo_path && file_exists($saved_photo_path)) {
                                 unlink($saved_photo_path);
@@ -365,37 +357,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             </div>
 
-            <div class="form-row">
-
-                <div class="form-group">
-
-                    <label>
-                        Password
-                        <small>(minimum 8 characters)</small>
-                    </label>
-
-                    <input
-                        type="password"
-                        name="password"
-                        placeholder="Create password"
-                        required
-                    >
-
-                </div>
-
-                <div class="form-group">
-
-                    <label>Confirm Password</label>
-
-                    <input
-                        type="password"
-                        name="confirm_password"
-                        placeholder="Repeat password"
-                        required
-                    >
-
-                </div>
-
+            <div class="alert alert-info" style="font-size: 0.85rem; margin-bottom: 20px; line-height: 1.5;">
+                🔒 <strong>Login Password Notice:</strong> Your <strong>Form Number</strong> will automatically serve as your default login password. You will use it to log in once registered.
             </div>
 
             <button
